@@ -1,0 +1,2033 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>RunPredict — 駅伝・陸上 予想アプリ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Saira+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#13223F;        /* navy ink */
+  --ink2:#1E3358;
+  --sash:#D7263D;       /* 襷 crimson */
+  --track:#2B5FD9;      /* track blue */
+  --gold:#E0A52B;       /* reward */
+  --paper:#EEF2F8;
+  --card:#FFFFFF;
+  --line:#E4EAF3;
+  --muted:#7A879C;
+  --good:#1FA363;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:"Noto Sans JP",system-ui,sans-serif;
+  background:var(--paper);
+  color:var(--ink);
+  margin:0;
+  min-height:100vh;
+}
+.num{font-family:"Saira Condensed","Noto Sans JP",sans-serif;font-variant-numeric:tabular-nums}
+
+/* ---------- phone frame ---------- */
+.phone{
+  width:100%;height:100vh;height:100dvh;
+  background:var(--paper);position:relative;overflow:hidden;
+  display:flex;flex-direction:column;margin:0 auto;
+}
+@media(min-width:640px){
+  .phone{max-width:460px;height:100dvh;box-shadow:0 0 60px rgba(0,0,0,.12)}
+  body{background:#e7ebf2}
+}
+.notch{display:none}
+.statusbar{display:flex;align-items:center;justify-content:flex-end;padding:8px 18px;padding-top:calc(8px + env(safe-area-inset-top));font-size:12px;font-weight:700;color:#fff;flex:0 0 auto;background:var(--ink)}
+.statusbar.light{color:var(--ink);background:transparent;position:absolute;width:100%;z-index:5}
+.statusbar .dots{letter-spacing:1px}
+
+/* ---------- app body ---------- */
+.app{flex:1;overflow:hidden;display:flex;flex-direction:column;position:relative}
+.screen{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;padding-bottom:calc(104px + env(safe-area-inset-bottom))}
+.screen.active{display:block;animation:slidein .32s cubic-bezier(.2,.8,.2,1)}
+@keyframes slidein{from{opacity:.3;transform:translateX(34px)}to{opacity:1;transform:none}}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.screen.back{animation:slideback .32s cubic-bezier(.2,.8,.2,1)}
+@keyframes slideback{from{opacity:.3;transform:translateX(-34px)}to{opacity:1;transform:none}}
+
+/* header */
+.hdr{background:var(--ink);color:#fff;padding:8px 20px 18px;position:relative;overflow:hidden}
+.hdr::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 0 58%,rgba(215,38,61,.9) 58% 66%,transparent 66% 70%,rgba(43,95,217,.8) 70% 76%,transparent 76%);opacity:.9}
+.hdr-row{display:flex;align-items:center;gap:12px;position:relative;z-index:2}
+.hdr h1{font-size:19px;font-weight:900;letter-spacing:.02em}
+.hdr .sub{font-size:11px;color:#9fb3d6;margin-top:2px}
+.back{width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,.12);border:none;color:#fff;font-size:18px;display:grid;place-items:center;cursor:pointer}
+.avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#2B5FD9,#D7263D);margin-left:auto;display:grid;place-items:center;color:#fff;font-weight:900;font-size:14px}
+
+/* brand splash header (home) */
+.brand{background:var(--ink);color:#fff;padding:18px 20px 26px;position:relative;overflow:hidden}
+.brand::before{content:"";position:absolute;top:-40px;right:-30px;width:220px;height:320px;background:linear-gradient(120deg,transparent 40%,rgba(215,38,61,.85) 40% 50%,transparent 50% 56%,rgba(43,95,217,.7) 56% 66%,transparent 66%);transform:rotate(8deg)}
+.brand .logo{font-size:24px;font-weight:900;letter-spacing:-.01em;position:relative;z-index:2}
+.brand .logo b{color:var(--sash)}
+.brand .tag{font-size:11.5px;color:#a9bbdb;margin-top:6px;position:relative;z-index:2;line-height:1.5}
+.ptbar{margin-top:16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:12px 16px;display:flex;align-items:center;gap:14px;position:relative;z-index:2}
+.ptbar .label{font-size:10px;color:#9fb3d6;letter-spacing:.08em}
+.ptbar .val{font-family:"Saira Condensed";font-size:30px;font-weight:700;line-height:1;color:var(--gold)}
+.ptbar .val small{font-size:13px;color:#fff;font-weight:600;margin-left:3px}
+.ptbar .coin{margin-left:auto;width:42px;height:42px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#f5cf6b,#d2941c);display:grid;place-items:center;color:#7a5200;font-weight:900;font-size:18px;box-shadow:inset 0 -3px 6px rgba(0,0,0,.2)}
+
+.body{padding:18px 16px}
+.eyebrow{font-size:11px;font-weight:700;color:var(--sash);letter-spacing:.12em;display:flex;align-items:center;gap:7px;margin:2px 0 12px}
+.eyebrow::before{content:"";width:18px;height:2px;background:var(--sash);display:inline-block}
+.sec-title{font-size:16px;font-weight:900;margin-bottom:12px}
+
+/* tabs */
+.tabs{display:flex;background:#fff;border-radius:13px;padding:4px;gap:4px;border:1px solid var(--line);margin-bottom:16px}
+.tabs button{flex:1;border:none;background:none;padding:9px;border-radius:9px;font-weight:700;font-size:12.5px;color:var(--muted);cursor:pointer;font-family:inherit}
+.tabs button.on{background:var(--ink);color:#fff}
+
+/* tournament card */
+.tcard{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:12px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:.15s;position:relative;overflow:hidden}
+.tcard:active{transform:scale(.985)}
+.tcard .badge{position:absolute;top:0;left:0;width:0;height:0;border-style:solid;border-width:46px 46px 0 0}
+.tcard .badge.live{border-color:var(--sash) transparent transparent transparent}
+.tcard .badge.done{border-color:var(--muted) transparent transparent transparent}
+.tcard .badge span{position:absolute;top:-40px;left:5px;color:#fff;font-size:8px;font-weight:700;transform:rotate(-45deg);white-space:nowrap}
+.tlogo{width:54px;height:54px;border-radius:14px;background:linear-gradient(135deg,var(--ink),var(--track));display:grid;place-items:center;color:#fff;font-weight:900;font-size:13px;flex:0 0 auto;text-align:center;line-height:1.1}
+.tcard .info{flex:1;min-width:0}
+.tcard .info h3{font-size:15px;font-weight:900}
+.tcard .info .meta{font-size:11px;color:var(--muted);margin-top:3px}
+.tcard .info .status{display:inline-block;margin-top:7px;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px}
+.st-live{background:#fde7ea;color:var(--sash)}
+.st-soon{background:#e6efff;color:var(--track)}
+.st-done{background:#eef1f6;color:var(--muted)}
+.go{width:30px;height:30px;border-radius:50%;background:var(--paper);display:grid;place-items:center;color:var(--ink);font-size:16px;flex:0 0 auto}
+
+/* predict */
+.course{background:var(--ink);border-radius:18px;padding:16px;color:#fff;margin-bottom:16px;position:relative;overflow:hidden}
+.course .label{font-size:10px;color:#9fb3d6;letter-spacing:.1em}
+.course h3{font-size:17px;font-weight:900;margin:3px 0 4px}
+.course .hint{font-size:11px;color:#a9bbdb}
+.slot-list{margin-bottom:8px}
+.slot{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:11px 13px;margin-bottom:8px;min-height:54px}
+.slot.empty{border-style:dashed;background:#f7f9fc}
+.rank-medal{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-family:"Saira Condensed";font-weight:700;font-size:16px;color:#fff;flex:0 0 auto;background:var(--ink2)}
+.rank-medal.r1{background:linear-gradient(135deg,#f3cf6a,#cf9419)}
+.rank-medal.r2{background:linear-gradient(135deg,#cfd6e0,#9aa6b6)}
+.rank-medal.r3{background:linear-gradient(135deg,#e0a777,#b6794a)}
+.slot .nm{font-weight:700;font-size:14px;flex:1}
+.slot .ph{color:#aab4c4;font-size:13px;flex:1}
+.slot .rm{border:none;background:#fbe9ec;color:var(--sash);font-weight:700;font-size:11px;padding:6px 10px;border-radius:9px;cursor:pointer}
+.pool-title{font-size:12px;font-weight:700;color:var(--muted);margin:14px 0 8px}
+.pool{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:12px;padding:9px 13px;font-weight:700;font-size:13px;cursor:pointer;transition:.12s}
+.chip:active{transform:scale(.95)}
+.chip.used{opacity:.32;pointer-events:none;text-decoration:line-through}
+.chip .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+
+/* big button */
+.cta{width:100%;border:none;background:var(--sash);color:#fff;font-weight:900;font-size:15px;padding:16px;border-radius:15px;cursor:pointer;font-family:inherit;box-shadow:0 8px 20px rgba(215,38,61,.3)}
+.cta:disabled{background:#cdd5e1;color:#fff;box-shadow:none;cursor:not-allowed}
+.cta.blue{background:var(--track);box-shadow:0 8px 20px rgba(43,95,217,.28)}
+.cta.ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line);box-shadow:none}
+
+/* result */
+.scoreboard{background:linear-gradient(150deg,var(--ink),#23457f);border-radius:20px;padding:24px 20px;color:#fff;text-align:center;margin-bottom:18px;position:relative;overflow:hidden}
+.scoreboard::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 60%,rgba(215,38,61,.5) 60% 67%,transparent 67% 72%,rgba(255,255,255,.12) 72% 77%,transparent 77%)}
+.scoreboard .ttl{font-size:12px;color:#a9bbdb;position:relative}
+.scoreboard .pts{font-family:"Saira Condensed";font-size:64px;font-weight:700;line-height:1;color:var(--gold);position:relative;margin:6px 0}
+.scoreboard .pts small{font-size:20px;color:#fff}
+.scoreboard .msg{font-size:13px;font-weight:700;position:relative}
+.cmp{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-bottom:18px}
+.cmp .hrow{display:flex;background:var(--paper);font-size:10px;font-weight:700;color:var(--muted);padding:9px 14px;letter-spacing:.05em}
+.cmp .row{display:flex;align-items:center;padding:11px 14px;border-top:1px solid var(--line);font-size:13px}
+.cmp .c-rank{width:30px;font-family:"Saira Condensed";font-weight:700;font-size:15px}
+.cmp .c-team{flex:1;font-weight:700}
+.cmp .c-act{width:54px;text-align:center;color:var(--muted);font-size:12px}
+.cmp .c-pt{width:60px;text-align:right;font-weight:900;font-family:"Saira Condensed";font-size:15px}
+.hit{color:var(--good)}.miss{color:var(--muted)}
+.tag-hit{display:inline-block;font-size:9px;background:#e3f5ec;color:var(--good);padding:2px 6px;border-radius:6px;margin-left:6px;font-weight:700}
+
+/* ranking */
+.podium{display:flex;align-items:flex-end;justify-content:center;gap:8px;margin:6px 0 18px}
+.pod{flex:1;background:#fff;border:1px solid var(--line);border-radius:14px 14px 0 0;padding:14px 6px 12px;text-align:center}
+.pod .pa{width:42px;height:42px;border-radius:50%;margin:0 auto 6px;display:grid;place-items:center;color:#fff;font-weight:900}
+.pod .pn{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pod .pp{font-family:"Saira Condensed";font-weight:700;color:var(--track);margin-top:2px}
+.pod.first{padding-bottom:30px}
+.pod.first .pa{width:52px;height:52px;background:linear-gradient(135deg,#f3cf6a,#cf9419)}
+.pod.second .pa{background:linear-gradient(135deg,#cfd6e0,#9aa6b6)}
+.pod.third .pa{background:linear-gradient(135deg,#e0a777,#b6794a)}
+.lrow{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:13px;padding:11px 14px;margin-bottom:8px}
+.lrow.me{border-color:var(--track);background:#f3f7ff}
+.lrank{width:24px;font-family:"Saira Condensed";font-weight:700;font-size:17px;color:var(--muted);text-align:center}
+.lava{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:900;font-size:13px}
+.lname{flex:1;font-weight:700;font-size:13.5px}
+.lpts{font-family:"Saira Condensed";font-weight:700;font-size:16px;color:var(--ink)}
+
+/* prizes */
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pz{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column}
+.pz .img{height:78px;border-radius:11px;background:var(--paper);display:grid;place-items:center;font-size:34px;margin-bottom:10px}
+.pz h4{font-size:12.5px;font-weight:900;line-height:1.35;min-height:34px}
+.pz .cost{font-family:"Saira Condensed";font-weight:700;color:var(--gold);font-size:18px;margin:6px 0 9px}
+.pz .cost small{font-size:11px;color:var(--muted);font-family:"Noto Sans JP"}
+.pz button{border:none;border-radius:10px;padding:9px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;background:var(--track);color:#fff}
+.pz button:disabled{background:#e7ebf2;color:#aab4c4}
+.pz.owned button{background:#e3f5ec;color:var(--good)}
+
+/* mypage */
+.profile{background:var(--ink);color:#fff;padding:24px 20px;text-align:center;position:relative;overflow:hidden}
+.profile::after{content:"";position:absolute;top:-30px;right:-20px;width:160px;height:200px;background:linear-gradient(120deg,transparent 45%,rgba(215,38,61,.7) 45% 53%,transparent 53% 60%,rgba(43,95,217,.6) 60% 68%,transparent 68%);transform:rotate(10deg)}
+.profile .pav{width:72px;height:72px;border-radius:50%;margin:0 auto 10px;background:linear-gradient(135deg,#2B5FD9,#D7263D);display:grid;place-items:center;font-size:26px;font-weight:900;position:relative;z-index:2;border:3px solid rgba(255,255,255,.25)}
+.profile h2{font-size:18px;font-weight:900;position:relative;z-index:2}
+.profile .uid{font-size:12px;color:#a9bbdb;position:relative;z-index:2}
+.statline{display:flex;background:#fff;margin:-18px 16px 0;border-radius:16px;border:1px solid var(--line);position:relative;z-index:3;box-shadow:0 8px 24px rgba(19,34,63,.1)}
+.statline .st{flex:1;text-align:center;padding:14px 6px}
+.statline .st + .st{border-left:1px solid var(--line)}
+.statline .v{font-family:"Saira Condensed";font-weight:700;font-size:22px;color:var(--ink)}
+.statline .k{font-size:10px;color:var(--muted);margin-top:2px}
+.menu{margin:16px}
+.mitem{display:flex;align-items:center;gap:13px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:9px;cursor:pointer}
+.mitem .ic{width:38px;height:38px;border-radius:11px;background:var(--paper);display:grid;place-items:center;font-size:18px}
+.mitem .mt{flex:1}
+.mitem .mt b{font-size:13.5px;display:block}
+.mitem .mt span{font-size:11px;color:var(--muted)}
+.mitem .arr{color:#c2cbd9;font-size:18px}
+.badges{display:flex;flex-wrap:wrap;gap:10px}
+.bdg{width:calc(33.33% - 7px);background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 6px;text-align:center}
+.bdg .be{font-size:26px;filter:grayscale(1);opacity:.3}
+.bdg.got .be{filter:none;opacity:1}
+.bdg .bn{font-size:9.5px;font-weight:700;margin-top:5px;line-height:1.25;color:var(--muted)}
+.bdg.got .bn{color:var(--ink)}
+
+/* radar */
+.radar-wrap{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;text-align:center}
+.scout-name{font-size:16px;font-weight:900}
+.scout-team{font-size:11px;color:var(--muted);margin-bottom:6px}
+.report{background:var(--paper);border-radius:12px;padding:13px;font-size:12px;line-height:1.7;text-align:left;margin-top:12px;color:var(--ink2)}
+.report b{color:var(--sash)}
+
+/* diary */
+.field{margin-bottom:12px}
+.field label{font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px}
+.field input,.field textarea,.field select{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px 13px;font-family:inherit;font-size:13.5px;background:#fff;color:var(--ink)}
+.field textarea{resize:none;height:70px}
+.diary-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:10px}
+.diary-card .d-top{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px}
+.diary-card .d-ev{font-weight:900;font-size:14px}
+.d-hint{font-size:11px;color:var(--muted);margin:-6px 0 14px;line-height:1.5}
+.goal-card{background:linear-gradient(120deg,#13223F,#23406f);border-radius:16px;padding:14px 15px;margin-bottom:16px;color:#fff}
+.goal-h{font-size:13px;font-weight:900;margin-bottom:9px}
+.goal-row{display:flex;gap:8px}
+.goal-row input{flex:1;border:none;border-radius:10px;padding:11px 12px;font-size:13px;font-family:inherit;background:#fff;color:var(--ink)}
+.goal-row button{flex:0 0 auto;border:none;border-radius:10px;padding:0 16px;font-size:13px;font-weight:700;font-family:inherit;background:var(--gold,#E0A52B);color:#3a2900;cursor:pointer}
+.goal-cur{font-size:11.5px;color:#cfe0ff;margin-top:9px;line-height:1.5;min-height:0}
+.goal-cur:empty{margin-top:0}
+.wk-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 15px;margin-bottom:16px}
+.wk-h{font-size:13px;font-weight:900;color:var(--ink);margin-bottom:11px}
+.wk-stats{display:flex;gap:8px;margin-bottom:12px}
+.wk-stats>div{flex:1;background:var(--paper);border-radius:11px;padding:10px 4px;text-align:center}
+.wk-stats .v{font-family:"Saira Condensed",sans-serif;font-size:23px;font-weight:700;color:var(--ink);line-height:1}
+.wk-stats .k{font-size:10px;color:var(--muted);margin-top:4px}
+.wk-btn{width:100%;border:none;border-radius:11px;padding:12px;font-size:13px;font-weight:700;font-family:inherit;background:var(--track);color:#fff;cursor:pointer}
+.wk-ai{background:var(--paper);border-radius:11px;padding:12px 13px;font-size:12.5px;line-height:1.85;color:#22324d}
+.wk-ai b{color:var(--track)}
+.wk-empty{font-size:11.5px;color:var(--muted);text-align:center;padding:6px 0}
+.diary-card .d-ai{background:#f3f7ff;border-left:3px solid var(--track);border-radius:8px;padding:9px 11px;margin-top:9px;font-size:11.5px;line-height:1.6}
+.diary-card .d-ai b{color:var(--track)}
+
+/* bottom nav */
+.nav{position:absolute;bottom:0;left:0;right:0;min-height:78px;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;padding:6px 8px;padding-bottom:calc(10px + env(safe-area-inset-bottom));z-index:50}
+.nav button{flex:1;border:none;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:var(--muted);font-family:inherit;padding-top:6px}
+.nav button .ni{font-size:20px;line-height:1}
+.nav button .nl{font-size:9.5px;font-weight:700}
+.nav button.on{color:var(--sash)}
+
+/* toast & modal */
+/* chat board */
+.compose{display:flex;gap:8px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px;margin-bottom:14px}
+.compose input{flex:1;border:none;background:none;font-family:inherit;font-size:13.5px;padding:6px 8px;color:var(--ink);outline:none}
+.compose button{border:none;background:var(--track);color:#fff;font-weight:700;font-size:12.5px;padding:9px 16px;border-radius:10px;cursor:pointer;font-family:inherit;flex:0 0 auto}
+.post{display:flex;gap:10px;margin-bottom:14px}
+.post .pava{width:34px;height:34px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;color:#fff;font-weight:900;font-size:12px}
+.post .pmain{flex:1;min-width:0}
+.post .phead{display:flex;align-items:baseline;gap:8px;margin-bottom:3px}
+.post .pnm{font-weight:900;font-size:12.5px}
+.post .ptime{font-size:10px;color:var(--muted)}
+.post .pbubble{background:#fff;border:1px solid var(--line);border-radius:4px 13px 13px 13px;padding:10px 13px;font-size:13px;line-height:1.55}
+.post.mine .pbubble{background:#eef4ff;border-color:#d6e3fb}
+.post .pacts{display:flex;gap:14px;margin-top:6px;font-size:11px;color:var(--muted)}
+.post .pacts span{cursor:pointer}
+.post .pacts span.liked{color:var(--sash);font-weight:700}
+.post.reply{margin-left:44px}
+.post.reply .pava{width:26px;height:26px;font-size:10px}
+.post.reply .pbubble{font-size:12px;padding:8px 11px}
+.reply-bar{display:flex;align-items:center;gap:8px;background:#eef4ff;border:1px solid #d6e3fb;border-radius:10px;padding:8px 11px;margin-bottom:8px;font-size:11.5px;color:var(--track);font-weight:700}
+.reply-bar button{margin-left:auto;border:none;background:none;color:var(--muted);font-size:15px;cursor:pointer;font-weight:700}
+.share-note{font-size:10px;color:var(--muted);text-align:center;margin-bottom:12px;line-height:1.5}
+.ai-busy{display:inline-flex;align-items:center;gap:6px;color:var(--track);font-weight:700;font-size:12px}
+.ai-dot{width:6px;height:6px;border-radius:50%;background:var(--track);animation:pulse 1s infinite}
+.ai-badge{display:inline-block;font-size:9px;background:#eef4ff;color:var(--track);padding:2px 7px;border-radius:6px;font-weight:700;margin-left:6px}
+.pv-banner{background:linear-gradient(120deg,#13223F,#23406f);border-radius:16px;padding:15px 16px;margin:14px 0;color:#fff;position:relative;overflow:hidden;cursor:pointer}
+.pv-banner .pvb-tag{font-size:10px;font-weight:700;color:#E0A52B;letter-spacing:.05em}
+.pv-banner h4{font-size:15px;font-weight:900;margin:4px 0 5px}
+.pv-banner p{font-size:11.5px;color:#b9c8e6;line-height:1.5}
+.pv-banner .pvb-go{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:22px;color:#E0A52B}
+.pv-article{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 17px;margin-bottom:14px}
+.pv-lead{font-size:13.5px;line-height:1.85;color:var(--ink);font-weight:700;border-left:3px solid var(--sash);padding-left:11px;margin-bottom:16px}
+.pv-h{font-size:14.5px;font-weight:900;color:var(--track);margin:16px 0 7px;display:flex;align-items:center;gap:7px}
+.pv-h:first-child{margin-top:0}
+.pv-p{font-size:13px;line-height:1.95;color:#22324d;margin-bottom:8px}
+.pv-meta{font-size:10.5px;color:var(--muted);text-align:center;margin-top:6px;line-height:1.6}
+.pv-loading{display:flex;flex-direction:column;align-items:center;gap:12px;padding:50px 20px;color:var(--track)}
+.pv-loading .sp{width:34px;height:34px;border:3px solid #d6e3fb;border-top-color:var(--track);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pv-src{background:var(--paper);border-radius:12px;padding:11px 13px;margin-bottom:14px;font-size:11px;color:var(--muted);line-height:1.6}
+.ai-insight{position:relative;margin:14px 0;border:1px solid var(--line);border-radius:18px;padding:13px;background:#fff;overflow:hidden}
+.ai-ins-head{font-size:13px;font-weight:900;color:var(--ink);margin-bottom:10px}
+.ai-badge.prem{background:#fff4d6;color:#9a6b08}
+.ai-ins-body.locked{filter:blur(5px);pointer-events:none;user-select:none;opacity:.85}
+.ai-lock{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:16px;background:rgba(255,255,255,.62)}
+.ai-lock .lk-ttl{font-size:14px;font-weight:900;color:var(--ink)}
+.ai-lock .lk-sub{font-size:11.5px;color:var(--muted);margin-top:5px;line-height:1.5}
+.sc-panel{background:var(--paper);border-radius:13px;padding:12px 13px;margin-bottom:11px}
+.sc-head{font-size:12.5px;font-weight:900;color:var(--ink);margin-bottom:9px}
+.sc-row{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+.sc-rk{width:16px;font-family:"Saira Condensed";font-weight:700;color:var(--track);font-size:14px;text-align:center}
+.sc-tm{width:96px;font-size:12px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-bar{flex:1;height:8px;background:#dde6f2;border-radius:5px;overflow:hidden}
+.sc-bar i{display:block;height:100%;background:linear-gradient(90deg,#2B5FD9,#D7263D);border-radius:5px}
+.sc-n{width:26px;text-align:right;font-family:"Saira Condensed";font-weight:700;font-size:14px;color:var(--ink)}
+.sc-foot{font-size:9.5px;color:var(--muted);margin-top:6px;line-height:1.4}
+.cd-panel{background:var(--paper);border-radius:13px;padding:12px 13px;margin-bottom:11px}
+.cd-head{font-size:12.5px;font-weight:900;color:var(--ink);margin-bottom:10px}
+.cd-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-top:1px solid #e0e7f1}
+.cd-row:first-of-type{border-top:none}
+.cd-badge{flex:0 0 auto;width:52px;border-radius:9px;color:#fff;text-align:center;padding:6px 2px;font-size:15px;line-height:1}
+.cd-badge span{display:block;font-size:9px;font-weight:700;margin-top:2px}
+.cd-main{flex:1;min-width:0}
+.cd-nm{font-size:13.5px;font-weight:700;color:var(--ink)}
+.cd-tm{font-size:11px;color:var(--muted);font-weight:400;margin-left:4px}
+.cd-hist{margin-top:4px;display:flex;flex-wrap:wrap;gap:5px}
+.cd-h{font-size:10px;color:var(--ink2);background:#fff;border:1px solid var(--line);border-radius:6px;padding:2px 6px}
+.cd-h b{color:var(--sash)}
+.cd-foot{font-size:9.5px;color:var(--muted);margin-top:8px;line-height:1.4}
+.ana-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;-webkit-overflow-scrolling:touch}
+.achip{flex:0 0 auto;border:1px solid var(--line);background:#fff;border-radius:20px;padding:8px 15px;font-size:12.5px;font-weight:700;color:var(--muted);font-family:inherit;cursor:pointer}
+.achip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.ana-hero{background:var(--ink);border-radius:16px;padding:16px;color:#fff;margin-bottom:14px}
+.ana-hero-t{font-size:17px;font-weight:900}
+.ana-hero-sub{font-size:11.5px;color:#9fb3d6;margin-top:2px}
+.ana-stats{display:flex;gap:8px;margin-top:13px}
+.ana-stats>div{flex:1;background:rgba(255,255,255,.08);border-radius:10px;padding:9px 6px;text-align:center}
+.ana-stats .v{font-size:13.5px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ana-stats .k{font-size:9.5px;color:#9fb3d6;margin-top:3px}
+.ana-link{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:14px;cursor:pointer}
+.ana-link .ic{width:40px;height:40px;border-radius:11px;background:var(--paper);display:flex;align-items:center;justify-content:center;font-size:19px}
+.ana-link .mt{flex:1}
+.ana-link .mt b{display:block;font-size:14px;color:var(--ink)}
+.ana-link .mt span{font-size:11px;color:var(--muted)}
+.ana-link .arr{color:var(--muted);font-size:18px}
+
+/* rules */
+.rule-link{display:inline-flex;align-items:center;gap:5px;margin-top:10px;font-size:11px;font-weight:700;color:#bcd0f5;cursor:pointer;position:relative;z-index:2}
+.rule-box{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:14px}
+.rule-box .rr{display:flex;justify-content:space-between;align-items:center;padding:13px 16px;font-size:13px;border-top:1px solid var(--line)}
+.rule-box .rr:first-child{border-top:none}
+.rule-box .rr b{font-weight:700}
+.rule-box .rr .pt{font-family:"Saira Condensed";font-weight:700;font-size:17px;color:var(--track)}
+.rule-box .rr .pt.bonus{color:var(--gold)}
+.note{font-size:11.5px;color:var(--muted);line-height:1.7;background:var(--paper);border-radius:12px;padding:13px}
+
+/* prize detail */
+.pd-hero{height:170px;border-radius:18px;background:linear-gradient(150deg,var(--paper),#dfe6f2);display:grid;place-items:center;font-size:84px;margin-bottom:18px}
+.pd-name{font-size:19px;font-weight:900;line-height:1.4}
+.pd-cost{font-family:"Saira Condensed";font-weight:700;font-size:30px;color:var(--gold);margin:8px 0 16px}
+.pd-cost small{font-size:14px;color:var(--muted);font-family:"Noto Sans JP"}
+.pd-desc{font-size:13px;line-height:1.8;color:var(--ink2);margin-bottom:22px}
+
+/* search */
+.search{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:13px;padding:11px 14px;margin-bottom:14px}
+.search span{font-size:15px}
+.search input{flex:1;border:none;background:none;font-family:inherit;font-size:13.5px;outline:none;color:var(--ink)}
+
+/* live status */
+.st-live2{background:var(--sash);color:#fff;display:inline-flex;align-items:center;gap:5px}
+.st-live2::before{content:"";width:7px;height:7px;border-radius:50%;background:#fff;animation:pulse 1.2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* panel */
+.panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:15px;margin-bottom:14px}
+.panel .pt-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.panel h4{font-size:13px;font-weight:900}
+.panel .leg-pill{font-size:10px;font-weight:700;color:var(--sash);background:#fde7ea;padding:3px 9px;border-radius:20px}
+.sub-note{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6}
+
+/* live standings */
+.std{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.std:first-child{border-top:none}
+.std .sr{width:20px;font-family:"Saira Condensed";font-weight:700;font-size:15px;color:var(--muted);text-align:center}
+.std .sc{width:6px;height:22px;border-radius:3px;flex:0 0 auto}
+.std .sn{flex:1;font-weight:700;font-size:13px}
+.std .sg{font-family:"Saira Condensed";font-weight:700;font-size:13px;color:var(--ink)}
+.std .sg.lead{color:var(--sash)}
+
+/* charts */
+.chart svg{width:100%;height:auto;display:block}
+.legend{display:flex;gap:14px;justify-content:center;font-size:10.5px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:middle}
+
+/* vote bars */
+.vbar{margin-bottom:9px}
+.vbar .vt{display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-bottom:4px}
+.vbar .vt .vp{font-family:"Saira Condensed";color:var(--track)}
+.vbar .track{height:9px;background:var(--paper);border-radius:6px;overflow:hidden}
+.vbar .fill{height:100%;border-radius:6px;transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.vbar.mine .vt{color:var(--sash)}
+
+/* leg / section prediction */
+.segmented{display:flex;background:#fff;border:1px solid var(--line);border-radius:13px;padding:4px;gap:4px;margin-bottom:14px}
+.segmented button{flex:1;border:none;background:none;padding:10px;border-radius:9px;font-weight:700;font-size:13px;color:var(--muted);font-family:inherit;cursor:pointer}
+.segmented button.on{background:var(--sash);color:#fff}
+.leg-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px}
+.leg-head{display:flex;align-items:baseline;gap:10px}
+.leg-no{font-weight:900;font-size:15px;color:var(--ink)}
+.leg-route{font-size:11px;color:var(--muted)}
+.leg-note{font-size:10.5px;color:var(--track);margin:3px 0 9px;font-weight:700}
+.leg-sel{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-family:inherit;font-size:13.5px;background:#fff;color:var(--ink)}
+.leg-head2{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;cursor:pointer}
+.leg-card.open{border-color:var(--track);box-shadow:0 6px 18px rgba(43,95,217,.1)}
+.leg-right{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.leg-stat{font-size:10px;font-weight:700;padding:4px 9px;border-radius:20px;white-space:nowrap}
+.leg-stat.todo{background:#eef1f6;color:var(--muted)}
+.leg-stat.done{background:#e3f5ec;color:var(--good)}
+.chev{color:#aab4c4;font-size:13px}
+.leg-body{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.rank-row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.rank-row .leg-sel{flex:1}
+.sec-info{background:var(--paper);border-radius:12px;padding:12px;margin-bottom:6px}
+.sec-sub{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px}
+.sec-info .chart svg{width:100%;height:auto;display:block}
+.route-strip{display:flex;align-items:center;gap:5px;margin:8px 0 10px}
+.rs-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+.rs-end{font-size:11px;font-weight:700;color:var(--ink);white-space:nowrap}
+.rs-line{flex:1;height:2px;background:#cdd5e1;border-radius:2px}
+.rs-km{font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap}
+.sec-rec{font-size:11.5px;color:var(--ink2);background:#fff;border:1px solid var(--line);border-radius:9px;padding:8px 10px}
+.sec-rec b{color:var(--track);font-family:"Saira Condensed";font-size:14px;margin:0 2px}
+.sec-yr{color:var(--muted);font-size:10px}
+.sec-note2{font-size:10.5px;color:var(--track);font-weight:700;margin-top:7px}
+
+/* result tables */
+.rtab{display:flex;background:#fff;border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px;margin:4px 0 14px}
+.rtab button{flex:1;border:none;background:none;padding:9px;border-radius:9px;font-weight:700;font-size:12.5px;color:var(--muted);font-family:inherit;cursor:pointer}
+.rtab button.on{background:var(--ink);color:#fff}
+.rtable{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.rtable .rh{display:flex;background:var(--paper);font-size:10px;font-weight:700;color:var(--muted);padding:9px 13px;letter-spacing:.04em}
+.rrow{display:flex;align-items:center;padding:11px 13px;border-top:1px solid var(--line);font-size:13px}
+.rrow .rk{width:30px;font-family:"Saira Condensed";font-weight:700;font-size:16px;color:var(--ink)}
+.rrow .rk.gold{color:#cf9419}.rrow .rk.silver{color:#9aa6b6}.rrow .rk.bronze{color:#b6794a}
+.rrow .rteam{flex:1;font-weight:700}
+.rrow .rtime{font-family:"Saira Condensed";font-weight:700;font-size:14px;white-space:nowrap}
+.rrow .rnote{font-size:9px;background:#fde7ea;color:var(--sash);padding:2px 6px;border-radius:6px;margin-left:7px;font-weight:700}
+.rrow .rsec{width:34px;font-family:"Saira Condensed";font-weight:700;color:var(--track);font-size:15px}
+.rrow .rrun{flex:1;min-width:0}
+.rrow .rrun b{font-size:13px;font-weight:700;display:block}
+.rrow .rrun span{font-size:10.5px;color:var(--muted)}
+.src-note{font-size:10px;color:var(--muted);margin-top:10px;text-align:center}
+
+.toast{position:absolute;left:50%;top:70px;transform:translateX(-50%) translateY(-20px);background:var(--ink);color:#fff;padding:12px 20px;border-radius:14px;font-size:13px;font-weight:700;z-index:200;opacity:0;transition:.3s;pointer-events:none;box-shadow:0 12px 30px rgba(0,0,0,.3);max-width:320px;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.modal{position:absolute;inset:0;background:rgba(8,12,25,.55);z-index:150;display:none;align-items:flex-end;justify-content:center}
+.modal.open{display:flex;animation:fade .2s}
+.sheet{background:#fff;width:100%;border-radius:24px 24px 0 0;padding:24px 22px 30px;text-align:center;animation:up .3s cubic-bezier(.2,.8,.2,1)}
+@keyframes up{from{transform:translateY(100%)}to{transform:none}}
+.sheet .big{font-size:46px;margin-bottom:6px}
+.sheet h3{font-size:18px;font-weight:900;margin-bottom:6px}
+.sheet p{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px}
+.empty{text-align:center;color:var(--muted);font-size:12.5px;padding:30px 10px;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="statusbar"><span class="num" id="clock">--:--</span><span style="font-size:9px;color:#9fb3d6;margin-left:5px">JST</span></div>
+
+  <div class="app">
+    <!-- ============ HOME ============ -->
+    <div class="screen active" id="s-home">
+      <div class="brand">
+        <div class="logo">Run<b>Predict</b></div>
+        <div class="tag">観るスポーツを、データで深く。<br>大会を選んで、結果を予想しよう。</div>
+        <div class="ptbar">
+          <div>
+            <div class="label">保有ポイント</div>
+            <div class="val"><span id="home-pt" class="num">0</span><small>pt</small></div>
+          </div>
+          <div class="coin">P</div>
+        </div>
+      </div>
+      <div class="body">
+        <div class="eyebrow">大会を探す</div>
+        <div class="search"><span>🔍</span><input id="tsearch" placeholder="大会名で検索（例：箱根 / 全日本）" oninput="renderHome()"></div>
+        <div class="tabs">
+          <button class="on" onclick="filterT(this,'open')">開催中・予定</button>
+          <button onclick="filterT(this,'done')">過去のリザルト</button>
+        </div>
+        <div id="tlist"></div>
+      </div>
+    </div>
+
+    <!-- ============ PREDICT ============ -->
+    <div class="screen" id="s-predict">
+      <div class="hdr">
+        <div class="hdr-row">
+          <button class="back" onclick="goBack('home')">‹</button>
+          <div><h1 id="pre-title">予想</h1><div class="sub" id="pre-sub"></div></div>
+        </div>
+      </div>
+      <div class="body">
+        <div class="course">
+          <div class="label" id="pre-leg">区間総合 / 着順予想</div>
+          <h3 id="pre-name"></h3>
+          <div class="hint" id="pre-hint">上位3チームの着順を予想 → 的中でポイント獲得。襷をつなぐ順番を決めよう。</div>
+          <div class="rule-link" onclick="go('rules')">📋 採点ルールを見る ›</div>
+        </div>
+        <div id="live-box"></div>
+        <div id="preview-box"></div>
+        <div id="data-box"></div>
+        <div class="segmented" id="mode-toggle" style="display:none">
+          <button id="mode-total-btn" class="on" onclick="switchMode('total')">総合着順</button>
+          <button id="mode-leg-btn" onclick="switchMode('leg')">区間別予想</button>
+        </div>
+        <div id="mode-total">
+          <div class="slot-list" id="slots"></div>
+          <div class="pool-title">▼ チームをタップして上位から並べる</div>
+          <div class="pool" id="pool"></div>
+          <button class="cta" id="submit-pre" disabled onclick="submitPrediction()">予想を確定する</button>
+          <div id="vote-box"></div>
+        </div>
+        <div id="mode-leg" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- ============ RESULT ============ -->
+    <div class="screen" id="s-result">
+      <div class="hdr">
+        <div class="hdr-row">
+          <button class="back" onclick="goBack('home')">‹</button>
+          <div><h1>結果発表</h1><div class="sub" id="res-sub"></div></div>
+        </div>
+      </div>
+      <div class="body">
+        <div class="scoreboard">
+          <div class="ttl">今回の獲得ポイント</div>
+          <div class="pts"><span id="res-pt" class="num">0</span><small>pt</small></div>
+          <div class="msg" id="res-msg"></div>
+        </div>
+        <div class="eyebrow">予想 vs 結果</div>
+        <div class="cmp">
+          <div class="hrow"><div class="c-rank">予想</div><div class="c-team">チーム</div><div class="c-act">実着順</div><div class="c-pt">獲得</div></div>
+          <div id="cmp-body"></div>
+        </div>
+        <button class="cta blue" onclick="go('ranking')">ランキングを見る</button>
+        <button class="cta ghost" style="margin-top:10px" onclick="go('prizes')">ポイントを景品に交換する</button>
+      </div>
+    </div>
+
+    <!-- ============ RANKING ============ -->
+    <div class="screen" id="s-ranking">
+      <div class="hdr"><div class="hdr-row"><button class="back" onclick="goBack('mypage')">‹</button><div><h1>予想王ランキング</h1><div class="sub">RunPredict コミュニティ</div></div></div></div>
+      <div class="body">
+        <div id="view-rank">
+          <div class="podium" id="podium"></div>
+          <div id="lboard"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ COMMUNITY (日誌・掲示板) ============ -->
+    <div class="screen" id="s-community">
+      <div class="hdr"><div class="hdr-row"><div><h1>コミュニティ</h1><div class="sub">練習日誌と掲示板</div></div></div></div>
+      <div class="body">
+        <div class="tabs">
+          <button class="on" id="ct-diary" onclick="commTab('diary')">📔 練習日誌</button>
+          <button id="ct-board" onclick="commTab('board')">💬 掲示板</button>
+        </div>
+        <div id="view-cdiary">
+          <div class="goal-card">
+            <div class="goal-h">🎯 いまの目標</div>
+            <div class="goal-row">
+              <input id="d-goal" placeholder="例: 5000m 14分台 / ハーフ70分切り / 箱根予選で区間上位">
+              <button onclick="saveGoal()">保存</button>
+            </div>
+            <div class="goal-cur" id="goal-cur"></div>
+          </div>
+          <div id="week-summary"></div>
+          <div class="field"><label>日付</label><input type="date" id="d-date"></div>
+          <div class="field"><label>練習内容（自由記述）</label>
+            <textarea id="d-content" style="min-height:96px" placeholder="例: 400mインターバル15本 72秒設定・つなぎ200mを60秒／体調絶好調&#10;例: 12kmジョグ 4分20ペース・脚が少し重い"></textarea>
+          </div>
+          <div class="d-hint">種目は内容から自動で判定します。距離・タイム・本数・体調などを自由に書いてOK。</div>
+          <button class="cta blue" onclick="addDiary()">日誌を記録（AI分析）</button>
+          <div class="eyebrow" style="margin-top:20px">記録一覧</div>
+          <div id="diary-list"></div>
+        </div>
+        <div id="view-cboard" style="display:none">
+          <div class="share-note">💬 この掲示板の投稿は他の利用者にも表示・共有されます</div>
+          <div class="reply-bar" id="reply-bar" style="display:none"></div>
+          <div class="compose">
+            <input id="chat-input" placeholder="予想・応援メッセージを投稿…" onkeydown="if(event.key==='Enter')sendChat()">
+            <button onclick="sendChat()">送信</button>
+          </div>
+          <div id="chat-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ DATA ANALYSIS ============ -->
+    <div class="screen" id="s-analysis">
+      <div class="hdr"><div class="hdr-row"><div><h1>データ分析</h1><div class="sub">選手コンディション・AI予測・記録</div></div></div></div>
+      <div class="body" id="analysis-body"></div>
+    </div>
+
+    <!-- ============ PRIZES ============ -->
+    <div class="screen" id="s-prizes">
+      <div class="hdr">
+        <div class="hdr-row">
+          <div><h1>景品交換</h1><div class="sub">貯めたポイントを景品やバッジに</div></div>
+          <div class="avatar"><span id="prz-pt-mini" class="num">0</span></div>
+        </div>
+      </div>
+      <div class="body">
+        <div class="ptbar" style="background:var(--ink);margin-bottom:18px">
+          <div><div class="label">交換に使えるポイント</div><div class="val"><span id="prz-pt" class="num">0</span><small>pt</small></div></div>
+          <div class="coin">P</div>
+        </div>
+        <div class="eyebrow">交換所</div>
+        <div class="pgrid" id="prizes"></div>
+      </div>
+    </div>
+
+    <!-- ============ MYPAGE ============ -->
+    <div class="screen" id="s-mypage">
+      <div class="profile">
+        <div class="pav">R</div>
+        <h2>ランナー太郎</h2>
+        <div class="uid">@runpredict_user</div>
+      </div>
+      <div class="statline">
+        <div class="st"><div class="v num" id="my-pt">0</div><div class="k">保有pt</div></div>
+        <div class="st"><div class="v num" id="my-rank">–</div><div class="k">予想ランク</div></div>
+        <div class="st"><div class="v num" id="my-bdg">0</div><div class="k">バッジ</div></div>
+      </div>
+      <div class="menu">
+        <div class="mitem" onclick="go('ranking')"><div class="ic">🏆</div><div class="mt"><b>予想王ランキング</b><span>みんなの順位を見る</span></div><div class="arr">›</div></div>
+        <div class="mitem" onclick="openScout()"><div class="ic">🔍</div><div class="mt"><b>AI選手スカウトレポート</b><span>注目ランナーをデータで分析</span></div><div class="arr">›</div></div>
+        <div class="mitem" onclick="openComm('diary')"><div class="ic">📔</div><div class="mt"><b>練習日誌（AI連携）</b><span>記録するとAIが要約・アドバイス</span></div><div class="arr">›</div></div>
+        <div class="mitem" onclick="openComm('board')"><div class="ic">💬</div><div class="mt"><b>掲示板（コミュニティ）</b><span>予想・応援を投稿・共有</span></div><div class="arr">›</div></div>
+        <div class="mitem" onclick="go('prizes')"><div class="ic">🎁</div><div class="mt"><b>景品・バッジ交換所</b><span>ポイントを景品に交換</span></div><div class="arr">›</div></div>
+      </div>
+      <div class="body" style="padding-top:0">
+        <div class="eyebrow">実績・バッジ</div>
+        <div class="badges" id="badges"></div>
+      </div>
+    </div>
+
+    <!-- ============ SCOUT ============ -->
+    <div class="screen" id="s-scout">
+      <div class="hdr"><div class="hdr-row"><button class="back" onclick="goBack('mypage')">‹</button><div><h1>AIスカウトレポート</h1><div class="sub">注目ランナー分析</div></div></div></div>
+      <div class="body">
+        <div class="tabs" id="scout-tabs"></div>
+        <div class="radar-wrap">
+          <div class="scout-name" id="sc-name"></div>
+          <div class="scout-team" id="sc-team"></div>
+          <svg id="radar" width="240" height="220" viewBox="0 0 240 220"></svg>
+          <div class="report" id="sc-report"></div>
+          <div id="sc-ai" style="margin-top:12px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ DIARY ============ -->
+    <!-- ============ RULES ============ -->
+    <div class="screen" id="s-rules">
+      <div class="hdr"><div class="hdr-row"><button class="back" onclick="goBack('predict')">‹</button><div><h1>採点ルール</h1><div class="sub">ポイントの貯まり方</div></div></div></div>
+      <div class="body">
+        <div class="eyebrow">着順の的中で加点</div>
+        <div class="rule-box">
+          <div class="rr"><b>予想と実着順が一致</b><span class="pt">+50</span></div>
+          <div class="rr"><b>1つ違い</b><span class="pt">+25</span></div>
+          <div class="rr"><b>2つ違い</b><span class="pt">+12</span></div>
+          <div class="rr"><b>3つ違い</b><span class="pt">+6</span></div>
+          <div class="rr"><b>4つ以上違い</b><span class="pt" style="color:#aab4c4">0</span></div>
+        </div>
+        <div class="eyebrow">ボーナス</div>
+        <div class="rule-box">
+          <div class="rr"><b>👑 優勝チームを的中</b><span class="pt bonus">+50</span></div>
+        </div>
+        <div class="note">上位3チームそれぞれの「予想着順」と「実際の着順」の差で加点します。3チーム完全的中なら最大 <b style="color:var(--ink)">200pt</b> 獲得（優勝ボーナス込み）。貯めたポイントは景品交換やランキング順位に反映されます。※採点ルールは暫定です。</div>
+        <button class="cta" style="margin-top:16px" onclick="goBack('predict')">予想に戻る</button>
+      </div>
+    </div>
+
+    <!-- ============ PRIZE DETAIL ============ -->
+    <div class="screen" id="s-prize-detail">
+      <div class="hdr"><div class="hdr-row"><button class="back" onclick="goBack('prizes')">‹</button><div><h1>景品の詳細</h1><div class="sub">RunPredict 交換所</div></div></div></div>
+      <div class="body" id="pd-body"></div>
+    </div>
+
+    <!-- ============ HISTORY RESULT ============ -->
+    <div class="screen" id="s-history">
+      <div class="hdr"><div class="hdr-row"><button class="back" onclick="goBack('home')">‹</button><div><h1 id="hi-title">大会リザルト</h1><div class="sub" id="hi-sub"></div></div></div></div>
+      <div class="body" id="hi-body"></div>
+    </div>
+
+    <!-- ============ AI PREVIEW ============ -->
+    <div class="screen" id="s-preview">
+      <div class="hdr"><div class="hdr-row"><button class="back" onclick="goBack('analysis')">‹</button><div><h1 id="pv-title">AI大会プレビュー</h1><div class="sub" id="pv-sub"></div></div></div></div>
+      <div class="body" id="pv-body"></div>
+    </div>
+
+    <!-- nav -->
+    <div class="nav" id="nav">
+      <button class="on" data-s="home" onclick="go('home')"><span class="ni">🏠</span><span class="nl">ホーム</span></button>
+      <button data-s="predict" onclick="goPredictDefault()"><span class="ni">🎯</span><span class="nl">予想</span></button>
+      <button data-s="analysis" onclick="go('analysis')"><span class="ni">📊</span><span class="nl">データ分析</span></button>
+      <button data-s="community" onclick="go('community')"><span class="ni">💬</span><span class="nl">コミュニティ</span></button>
+      <button data-s="mypage" onclick="go('mypage')"><span class="ni">👤</span><span class="nl">マイページ</span></button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+</div>
+
+<script>
+/* =================== STATE =================== */
+const state = {
+  points: 1200,
+  predictions: {},           // tournamentId -> {order:[teamIds], earned:int}
+  legPredictions: {},        // tournamentId -> {picks:{n:teamId}, scored, earned, correct}
+  ownedPrizes: [],
+  badges: ["first_login"],
+  diaries: [],
+  posts: null,
+  premium: false,
+  goal: "",
+};
+
+const HAKONE_TEAMS = [
+  {id:"aogaku",name:"青山学院大学",c:"#2E7D52"},{id:"komazawa",name:"駒澤大学",c:"#1b3a8f"},
+  {id:"kokugakuin",name:"國學院大學",c:"#6a1b9a"},{id:"chuo",name:"中央大学",c:"#c0392b"},
+  {id:"waseda",name:"早稲田大学",c:"#7a1f2b"},{id:"toyo",name:"東洋大学",c:"#1f2d54"},
+  {id:"soka",name:"創価大学",c:"#1f7a8c"},{id:"josai",name:"城西大学",c:"#15a07f"},
+  {id:"juntendo",name:"順天堂大学",c:"#1a3a6b"},{id:"hosei",name:"法政大学",c:"#d35400"}
+];
+
+const TOURNAMENTS = [
+  {id:"hakone103", name:"箱根駅伝 第103回", sub:"東京箱根間往復大学駅伝", date:"開催中・2027/01/03", logo:"箱根", status:"live", live:true, hasData:true,
+   teams:HAKONE_TEAMS,
+   // 復路 7区途中の途中経過（デモ）
+   standings:[
+     {id:"komazawa",gap:"先頭"},{id:"aogaku",gap:"+0:38"},{id:"kokugakuin",gap:"+1:22"},
+     {id:"chuo",gap:"+2:45"},{id:"soka",gap:"+3:30"},{id:"toyo",gap:"+4:10"},
+     {id:"waseda",gap:"+5:02"},{id:"josai",gap:"+5:48"}
+   ],
+   leg:"復路 7区（小田原→平塚）",
+   // ゴール後の最終結果（速報で開示）
+   result:["aogaku","komazawa","kokugakuin","chuo","soka","toyo","josai","waseda","juntendo","hosei"],
+   // みんなの優勝予想（投票シェア %）
+   vote:{komazawa:36,aogaku:30,kokugakuin:15,chuo:6,soka:5,toyo:4,waseda:2,josai:1,juntendo:1,hosei:0},
+   // 各区の区間賞（最速チーム）／1区〜10区
+   legResults:["komazawa","aogaku","kokugakuin","aogaku","aogaku","komazawa","soka","chuo","aogaku","komazawa"],
+   // 各区の順位結果（上位6チーム）／1区〜10区
+   legOrders:[
+     ["komazawa","aogaku","soka","chuo","kokugakuin","toyo"],
+     ["aogaku","komazawa","kokugakuin","toyo","chuo","waseda"],
+     ["kokugakuin","aogaku","komazawa","soka","chuo","josai"],
+     ["aogaku","kokugakuin","komazawa","chuo","toyo","soka"],
+     ["aogaku","komazawa","chuo","kokugakuin","soka","juntendo"],
+     ["komazawa","aogaku","kokugakuin","soka","toyo","chuo"],
+     ["soka","aogaku","komazawa","chuo","kokugakuin","josai"],
+     ["chuo","komazawa","aogaku","kokugakuin","waseda","toyo"],
+     ["aogaku","komazawa","kokugakuin","chuo","soka","juntendo"],
+     ["komazawa","aogaku","kokugakuin","toyo","chuo","hosei"]
+   ]
+  },
+  {id:"zenniti", name:"全日本大学駅伝2026", sub:"伊勢路を走る学生駅伝", date:"2026/11/01", logo:"全日本", status:"open",
+   teams:[
+     {id:"komazawa",name:"駒澤大学",c:"#1b3a8f"},{id:"aogaku",name:"青山学院大学",c:"#2E7D52"},
+     {id:"kokugakuin",name:"國學院大學",c:"#6a1b9a"},{id:"toyo",name:"東洋大学",c:"#1f2d54"},
+     {id:"chuo",name:"中央大学",c:"#c0392b"},{id:"soka",name:"創価大学",c:"#1f7a8c"}
+   ],
+   result:["komazawa","kokugakuin","aogaku","toyo","chuo","soka"]
+  },
+  {id:"sekai", name:"世界陸上2026", sub:"男子5000m 決勝", date:"2026/09/15", logo:"世界陸上", status:"open",
+   teams:[
+     {id:"r1",name:"キプチョゲ",c:"#c0392b"},{id:"r2",name:"イングブリクトセン",c:"#2980b9"},
+     {id:"r3",name:"チェプテゲイ",c:"#27ae60"},{id:"r4",name:"グレッサマ",c:"#8e44ad"},
+     {id:"r5",name:"田中駿介",c:"#13223F"},{id:"r6",name:"バレガ",c:"#e08e0b"}
+   ],
+   result:["r3","r2","r1","r6","r5","r4"]
+  }
+];
+
+// 箱根駅伝 全10区間の実距離（往路107.5km / 復路109.6km / 計217.1km）
+const COURSE = [
+  {n:1,name:"1区",route:"大手町→鶴見",km:21.3,leg:"往路",note:"平坦・六郷橋の起伏"},
+  {n:2,name:"2区",route:"鶴見→戸塚",km:23.1,leg:"往路",note:"花の2区・権太坂"},
+  {n:3,name:"3区",route:"戸塚→平塚",km:21.4,leg:"往路",note:"海沿いの平坦路"},
+  {n:4,name:"4区",route:"平塚→小田原",km:20.9,leg:"往路",note:"終盤に上り"},
+  {n:5,name:"5区",route:"小田原→芦ノ湖",km:20.8,leg:"往路",note:"山上り・最高点874m"},
+  {n:6,name:"6区",route:"芦ノ湖→小田原",km:20.8,leg:"復路",note:"山下り"},
+  {n:7,name:"7区",route:"小田原→平塚",km:21.3,leg:"復路",note:"平坦・気温上昇"},
+  {n:8,name:"8区",route:"平塚→戸塚",km:21.4,leg:"復路",note:"遊行寺の上り"},
+  {n:9,name:"9区",route:"戸塚→鶴見",km:23.1,leg:"復路",note:"松の9区・エース区間"},
+  {n:10,name:"10区",route:"鶴見→大手町",km:23.0,leg:"復路",note:"日本橋経由でゴール"}
+];
+// 高低図用（累積km, 標高m 近似）
+const ELEV = [[0,5],[21.3,3],[44.4,55],[65.8,8],[86.7,12],[102.9,874],[107.5,723],[128.3,12],[149.6,8],[171.0,55],[194.1,3],[217.1,5]];
+
+// 区間ごとの勾配（区間内距離km, 標高m 近似）＋ 区間記録（実データ 第102回時点）
+const SECDATA = {
+  1:{elev:[[0,4],[8,3],[12,2],[16.5,16],[18,4],[21.3,5]], record:{time:"1:00:28",holder:"青木瑠郁（國學院大）",year:"2026"}},
+  2:{elev:[[0,5],[7,9],[12,30],[14.5,58],[17,28],[20,42],[23.1,50]], record:{time:"1:05:10",holder:"V.キムタイ（城西大）",year:"2026"}},
+  3:{elev:[[0,55],[3,28],[6,10],[10,5],[16,4],[21.4,5]], record:{time:"59:25",holder:"Y.ヴィンセント（東京国際）",year:"2020"}},
+  4:{elev:[[0,5],[6,9],[12,13],[17,26],[20.9,36]], record:{time:"1:00:00",holder:"Y.ヴィンセント（東京国際）",year:"2023"}},
+  5:{elev:[[0,40],[4,90],[8,260],[12,520],[16.2,874],[19,770],[20.8,723]], record:{time:"1:07:17",holder:"黒田朝日（青山学院）",year:"2026"}},
+  6:{elev:[[0,723],[2.5,845],[6,600],[10,300],[15,95],[18,30],[20.8,13]], record:{time:"56:47",holder:"野村昭夢（青山学院）",year:"2025"}},
+  7:{elev:[[0,13],[5,9],[10,6],[15,8],[21.3,5]], record:{time:"1:00:43",holder:"佐藤圭汰（駒澤大）",year:"2025"}},
+  8:{elev:[[0,5],[6,6],[12,9],[16,20],[18,46],[20,56],[21.4,50]], record:{time:"1:03:45",holder:"塩出翔太（青山学院）",year:"2026"}},
+  9:{elev:[[0,55],[4,40],[8,20],[14,9],[20,4],[23.1,3]], record:{time:"1:07:15",holder:"中村唯翔（青山学院）",year:"2022"}},
+  10:{elev:[[0,3],[6,4],[12,5],[18,6],[23,5]], record:{time:"1:07:21",holder:"佐藤圭太（駒澤大）",year:"2026"}}
+};
+
+// 過去10年の総合優勝校・優勝タイム（実データ 2017〜2026）
+const HISTORY = [
+  {year:2026,kai:102,win:"青山学院大学",t:"10:37:34",sec:38254,note:"大会新・3連覇"},
+  {year:2025,kai:101,win:"青山学院大学",t:"10:41:19",sec:38479},
+  {year:2024,kai:100,win:"青山学院大学",t:"10:41:25",sec:38485,note:"第100回・大会新"},
+  {year:2023,kai:99, win:"駒澤大学",  t:"10:47:11",sec:38831},
+  {year:2022,kai:98, win:"青山学院大学",t:"10:43:42",sec:38622,note:"当時大会新"},
+  {year:2021,kai:97, win:"駒澤大学",  t:"10:56:04",sec:39364},
+  {year:2020,kai:96, win:"青山学院大学",t:"10:45:23",sec:38723},
+  {year:2019,kai:95, win:"東海大学",  t:"10:52:09",sec:39129},
+  {year:2018,kai:94, win:"青山学院大学",t:"10:57:39",sec:39459},
+  {year:2017,kai:93, win:"青山学院大学",t:"11:04:10",sec:39850}
+];
+
+const SLOTS = 3;
+const RESULTS_DB = {"generated_by":"RunPredict pipeline","tournaments":[{"id":"newyear","name":"ニューイヤー駅伝","category":"実業団駅伝","distance_km":100.0,"sections":7,"editions":[{"edition":70,"year":2026,"date":"2026-01-01","source_url":"http://www.jita-trackfield.jp/","standings":[{"rank":1,"team":"GMOインターネットグループ","time":"4:44:00","time_sec":17040,"note":"大会新"},{"rank":2,"team":"ロジスティード","time":"4:46:27","time_sec":17187,"note":null},{"rank":3,"team":"トヨタ自動車","time":"4:47:12","time_sec":17232,"note":null},{"rank":4,"team":"JR東日本","time":"4:47:47","time_sec":17267,"note":null},{"rank":5,"team":"サンベルクス","time":"4:47:51","time_sec":17271,"note":null},{"rank":6,"team":"中国電力","time":"4:48:04","time_sec":17284,"note":null},{"rank":7,"team":"黒崎播磨","time":"4:48:37","time_sec":17317,"note":null},{"rank":8,"team":"Honda","time":"4:48:38","time_sec":17318,"note":null}],"sections":[{"section":1,"distance_km":12.3,"runner":"富田峻平","grade":null,"team":"ロジスティード","time":"34:23","time_sec":2063,"note":null},{"section":2,"distance_km":21.9,"runner":"吉田響","grade":null,"team":"サンベルクス","time":"1:01:01","time_sec":3661,"note":"区間新"},{"section":3,"distance_km":15.3,"runner":"篠原倖太朗","grade":null,"team":"富士通","time":"42:53","time_sec":2573,"note":"区間新"},{"section":4,"distance_km":7.6,"runner":"R.ダパッシュ","grade":null,"team":"JR東日本","time":"20:32","time_sec":1232,"note":"区間新"},{"section":5,"distance_km":15.9,"runner":"太田蒼生","grade":null,"team":"GMOインターネットグループ","time":"46:00","time_sec":2760,"note":"区間新"},{"section":6,"distance_km":11.4,"runner":"嶋津雄大","grade":null,"team":"GMOインターネットグループ","time":"32:27","time_sec":1947,"note":"区間新"},{"section":7,"distance_km":15.6,"runner":"並木寧音","grade":null,"team":"SUBARU","time":"45:23","time_sec":2723,"note":"区間新"}],"section_results":{}}]},{"id":"zennihon","name":"全日本大学駅伝","category":"大学駅伝（三大駅伝）","distance_km":106.8,"sections":8,"editions":[{"edition":57,"year":2025,"date":"2025-11-02","source_url":"https://www.rikujyokyogi.co.jp/archives/188772","standings":[{"rank":1,"team":"駒澤大学","time":"5:06:53","time_sec":18413,"note":"2年ぶり17回目"},{"rank":2,"team":"中央大学","time":"5:08:54","time_sec":18534,"note":null},{"rank":3,"team":"青山学院大学","time":"5:09:28","time_sec":18568,"note":null},{"rank":4,"team":"國學院大學","time":"5:09:45","time_sec":18585,"note":null},{"rank":5,"team":"早稲田大学","time":"5:10:21","time_sec":18621,"note":null},{"rank":6,"team":"帝京大学","time":"5:10:56","time_sec":18656,"note":null},{"rank":7,"team":"創価大学","time":"5:11:56","time_sec":18716,"note":null},{"rank":8,"team":"順天堂大学","time":"5:14:33","time_sec":18873,"note":null},{"rank":9,"team":"城西大学","time":"5:15:26","time_sec":18926,"note":null},{"rank":10,"team":"日本大学","time":"5:15:37","time_sec":18937,"note":null}],"sections":[{"section":1,"distance_km":9.5,"runner":"中村晃斗","grade":"3","team":"志學館大学","time":"27:20","time_sec":1640,"note":null},{"section":2,"distance_km":11.1,"runner":"楠岡由浩","grade":"3","team":"帝京大学","time":"31:01","time_sec":1861,"note":"区間タイ"},{"section":3,"distance_km":11.9,"runner":"野中恒亨","grade":"3","team":"國學院大學","time":"33:11","time_sec":1991,"note":null},{"section":4,"distance_km":11.8,"runner":"柴田大地","grade":"3","team":"中央大学","time":"33:52","time_sec":2032,"note":null},{"section":5,"distance_km":12.4,"runner":"伊藤蒼唯","grade":"4","team":"駒澤大学","time":"35:01","time_sec":2101,"note":"区間新"},{"section":6,"distance_km":12.8,"runner":"飯田翔大","grade":"2","team":"青山学院大学","time":"37:20","time_sec":2240,"note":null},{"section":7,"distance_km":17.6,"runner":"黒田朝日","grade":"4","team":"青山学院大学","time":"49:31","time_sec":2971,"note":"区間新"},{"section":8,"distance_km":19.7,"runner":"工藤慎作","grade":"3","team":"早稲田大学","time":"56:54","time_sec":3414,"note":null}],"section_results":{"1":[{"rank":1,"team":"志學館大学","runner":"中村 晃斗","grade":"3","time":"0:27:20"},{"rank":2,"team":"早稲田大学","runner":"間瀬田 純平","grade":"4","time":"0:27:20"},{"rank":3,"team":"國學院大學","runner":"尾熊 迅斗","grade":"2","time":"0:27:21"},{"rank":4,"team":"駒澤大学","runner":"小山 翔也","grade":"3","time":"0:27:21"},{"rank":5,"team":"日本体育大学","runner":"荻野 桂輔","grade":"2","time":"0:27:22"},{"rank":6,"team":"順天堂大学","runner":"吉岡 大翔","grade":"3","time":"0:27:24"},{"rank":7,"team":"日本学連選抜","runner":"古橋 希翁","grade":"3","time":"0:27:25"},{"rank":8,"team":"創価大学","runner":"石丸 惇那","grade":"4","time":"0:27:25"},{"rank":9,"team":"中央大学","runner":"本間 颯","grade":"3","time":"0:27:25"},{"rank":10,"team":"大阪経済大学","runner":"岩坂 蓮太","grade":"2","time":"0:27:26"},{"rank":11,"team":"日本大学","runner":"山口 彰太","grade":"3","time":"0:27:28"},{"rank":12,"team":"青山学院大学","runner":"椙山 一颯","grade":"1","time":"0:27:28"},{"rank":13,"team":"帝京大学","runner":"柴戸 遼太","grade":"4","time":"0:27:32"},{"rank":14,"team":"関西学院大学","runner":"山下 慶馬","grade":"3","time":"0:27:43"},{"rank":15,"team":"城西大学","runner":"小田 伊織","grade":"3","time":"0:27:45"},{"rank":16,"team":"立教大学","runner":"吉屋 佑晟","grade":"4","time":"0:27:49"},{"rank":17,"team":"中央学院大学","runner":"坂本 駿","grade":"4","time":"0:27:50"},{"rank":18,"team":"東海大学","runner":"兵藤 ジュダ","grade":"4","time":"0:27:55"},{"rank":19,"team":"広島経済大学","runner":"東 秀太","grade":"4","time":"0:27:56"},{"rank":20,"team":"関西大学","runner":"平野 圭人","grade":"3","time":"0:27:58"},{"rank":21,"team":"大東文化大学","runner":"菅﨑 大翔","grade":"1","time":"0:28:03"},{"rank":22,"team":"名古屋大学","runner":"吉原 諒","grade":"1","time":"0:28:17"},{"rank":23,"team":"信州大学","runner":"片岡 晴哉","grade":"2","time":"0:28:19"},{"rank":24,"team":"岐阜協立大学","runner":"下田 悠友","grade":"2","time":"0:28:20"},{"rank":25,"team":"東海学連選抜","runner":"豊田 雄大","grade":"1","time":"0:28:26"},{"rank":26,"team":"東北学院大学","runner":"吉田 奏斗","grade":"3","time":"0:28:33"},{"rank":27,"team":"札幌学院大学","runner":"高坂 光希","grade":"3","time":"0:29:12"}],"2":[{"rank":1,"team":"帝京大学","runner":"楠岡 由浩","grade":"3","time":"0:31:01"},{"rank":2,"team":"中央大学","runner":"吉居 駿恭","grade":"4","time":"0:31:07"},{"rank":3,"team":"駒澤大学","runner":"谷中 晴","grade":"2","time":"0:31:14"},{"rank":4,"team":"早稲田大学","runner":"鈴木 琉胤","grade":"1","time":"0:31:15"},{"rank":5,"team":"創価大学","runner":"小池 莉希","grade":"3","time":"0:31:22"},{"rank":6,"team":"東海大学","runner":"永本 脩","grade":"3","time":"0:31:24"},{"rank":7,"team":"日本体育大学","runner":"平島 龍斗","grade":"4","time":"0:31:25"},{"rank":8,"team":"順天堂大学","runner":"井上 朋哉","grade":"1","time":"0:31:40"},{"rank":9,"team":"國學院大學","runner":"辻原 輝","grade":"3","time":"0:31:42"},{"rank":10,"team":"青山学院大学","runner":"荒巻 朋熙","grade":"4","time":"0:31:56"},{"rank":11,"team":"大東文化大学","runner":"棟方 一楽","grade":"3","time":"0:32:08"},{"rank":12,"team":"日本大学","runner":"山口 聡太","grade":"3","time":"0:32:22"},{"rank":13,"team":"城西大学","runner":"小林 竜輝","grade":"2","time":"0:32:39"},{"rank":14,"team":"立教大学","runner":"伊藤 匠海","grade":"3","time":"0:32:41"},{"rank":15,"team":"中央学院大学","runner":"近田 陽路","grade":"4","time":"0:32:44"},{"rank":16,"team":"関西学院大学","runner":"寺川 直央","grade":"3","time":"0:32:50"},{"rank":17,"team":"日本学連選抜","runner":"染谷 雄輝","grade":"4","time":"0:32:51"},{"rank":18,"team":"関西大学","runner":"谷村 恒晟","grade":"4","time":"0:33:00"},{"rank":19,"team":"札幌学院大学","runner":"西塚 璃純","grade":"4","time":"0:33:16"},{"rank":20,"team":"志學館大学","runner":"齊藤 莉樹","grade":"2","time":"0:33:21"},{"rank":21,"team":"大阪経済大学","runner":"婦木 拓実","grade":"4","time":"0:33:28"},{"rank":22,"team":"広島経済大学","runner":"谷畑 佑樹","grade":"1","time":"0:33:53"},{"rank":23,"team":"東海学連選抜","runner":"原 一成","grade":"2","time":"0:34:13"},{"rank":24,"team":"岐阜協立大学","runner":"日比 健仁","grade":"3","time":"0:34:29"},{"rank":25,"team":"名古屋大学","runner":"加藤 太一","grade":"4","time":"0:34:31"},{"rank":26,"team":"東北学院大学","runner":"萩川 晄","grade":"2","time":"0:35:01"},{"rank":27,"team":"信州大学","runner":"森田 克馬","grade":"4","time":"0:35:24"}],"3":[{"rank":1,"team":"國學院大學","runner":"野中 恒亨","grade":"3","time":"0:33:11"},{"rank":2,"team":"城西大学","runner":"ヴィクター キムタイ","grade":"4","time":"0:33:12"},{"rank":3,"team":"駒澤大学","runner":"帰山 侑大","grade":"4","time":"0:33:38"},{"rank":4,"team":"中央大学","runner":"藤田 大智","grade":"3","time":"0:33:42"},{"rank":5,"team":"創価大学","runner":"スティーブン ムチーニ","grade":"3","time":"0:33:44"},{"rank":5,"team":"日本体育大学","runner":"田島 駿介","grade":"4","time":"0:33:44"},{"rank":7,"team":"青山学院大学","runner":"宇田川 瞬矢","grade":"4","time":"0:33:54"},{"rank":8,"team":"帝京大学","runner":"原 悠太","grade":"3","time":"0:33:55"},{"rank":9,"team":"東海大学","runner":"花岡 寿哉","grade":"4","time":"0:34:01"},{"rank":10,"team":"中央学院大学","runner":"市川 大世","grade":"3","time":"0:34:02"},{"rank":11,"team":"大東文化大学","runner":"大濱 逞真","grade":"2","time":"0:34:29"},{"rank":11,"team":"日本学連選抜","runner":"山本 涼介","grade":"4","time":"0:34:29"},{"rank":13,"team":"早稲田大学","runner":"堀野 正太","grade":"1","time":"0:34:39"},{"rank":14,"team":"順天堂大学","runner":"山本 悠","grade":"2","time":"0:34:48"},{"rank":15,"team":"日本大学","runner":"天野 啓太","grade":"3","time":"0:35:00"},{"rank":16,"team":"大阪経済大学","runner":"内尾 射光矢","grade":"2","time":"0:35:52"},{"rank":17,"team":"立教大学","runner":"野口 颯汰","grade":"3","time":"0:35:54"},{"rank":18,"team":"東海学連選抜","runner":"岩田 玄弥","grade":"3","time":"0:35:58"},{"rank":18,"team":"関西学院大学","runner":"久山 大祐","grade":"3","time":"0:35:58"},{"rank":20,"team":"札幌学院大学","runner":"栗田 紳冴","grade":"3","time":"0:36:24"},{"rank":21,"team":"志學館大学","runner":"小田 夕琥","grade":"2","time":"0:36:31"},{"rank":22,"team":"関西大学","runner":"芝 秀介","grade":"4","time":"0:36:59"},{"rank":23,"team":"信州大学","runner":"尾崎 康佑","grade":"4","time":"0:37:04"},{"rank":24,"team":"岐阜協立大学","runner":"田畑 来成","grade":"2","time":"0:37:10"},{"rank":24,"team":"広島経済大学","runner":"小川 晴也","grade":"4","time":"0:37:10"},{"rank":26,"team":"名古屋大学","runner":"浅野 稜太","grade":"4","time":"0:37:32"},{"rank":27,"team":"東北学院大学","runner":"齋藤 颯希","grade":"4","time":"0:37:45"}],"4":[{"rank":1,"team":"中央大学","runner":"柴田 大地","grade":"3","time":"0:33:52"},{"rank":2,"team":"國學院大學","runner":"高山 豪起","grade":"4","time":"0:33:54"},{"rank":3,"team":"帝京大学","runner":"谷口 颯太","grade":"3","time":"0:34:00"},{"rank":4,"team":"創価大学","runner":"織橋 巧","grade":"3","time":"0:34:11"},{"rank":5,"team":"駒澤大学","runner":"安原 海晴","grade":"3","time":"0:34:28"},{"rank":6,"team":"早稲田大学","runner":"吉倉 ナヤブ直希","grade":"2","time":"0:34:37"},{"rank":7,"team":"青山学院大学","runner":"塩出 翔太","grade":"4","time":"0:34:44"},{"rank":8,"team":"順天堂大学","runner":"永原 颯磨","grade":"2","time":"0:34:56"},{"rank":9,"team":"大東文化大学","runner":"中澤 真大","grade":"2","time":"0:35:03"},{"rank":10,"team":"城西大学","runner":"柴田 侑","grade":"3","time":"0:35:14"},{"rank":11,"team":"東海大学","runner":"中野 純平","grade":"2","time":"0:35:19"},{"rank":12,"team":"日本体育大学","runner":"二村 昇太朗","grade":"4","time":"0:35:32"},{"rank":13,"team":"日本大学","runner":"中澤 星音","grade":"4","time":"0:35:33"},{"rank":14,"team":"立教大学","runner":"小倉 史也","grade":"4","time":"0:35:43"},{"rank":15,"team":"日本学連選抜","runner":"鶴田 寛武","grade":"1","time":"0:35:47"},{"rank":16,"team":"中央学院大学","runner":"三角 洸太","grade":"4","time":"0:35:49"},{"rank":17,"team":"大阪経済大学","runner":"新 博貴","grade":"4","time":"0:36:21"},{"rank":18,"team":"関西大学","runner":"秋山 翔太朗","grade":"4","time":"0:36:28"},{"rank":19,"team":"名古屋大学","runner":"阿部 祥典","grade":"1","time":"0:36:45"},{"rank":20,"team":"関西学院大学","runner":"山本 雅也","grade":"4","time":"0:36:56"},{"rank":21,"team":"東海学連選抜","runner":"鈴木 公輔","grade":"2","time":"0:36:57"},{"rank":22,"team":"札幌学院大学","runner":"早川 拓海","grade":"4","time":"0:37:03"},{"rank":23,"team":"広島経済大学","runner":"瀬尾 大和","grade":"2","time":"0:37:22"},{"rank":24,"team":"岐阜協立大学","runner":"道下 力也","grade":"3","time":"0:37:37"},{"rank":25,"team":"信州大学","runner":"佐藤 匠","grade":"4","time":"0:38:31"},{"rank":26,"team":"志學館大学","runner":"濱川 輝太","grade":"2","time":"0:38:32"},{"rank":27,"team":"東北学院大学","runner":"中野 朝斗","grade":"4","time":"0:40:18"}],"5":[{"rank":1,"team":"駒澤大学","runner":"伊藤 蒼唯","grade":"4","time":"0:35:01"},{"rank":2,"team":"國學院大學","runner":"飯國 新太","grade":"2","time":"0:36:26"},{"rank":3,"team":"中央大学","runner":"三宅 悠斗","grade":"1","time":"0:36:33"},{"rank":4,"team":"青山学院大学","runner":"佐藤 有一","grade":"4","time":"0:36:34"},{"rank":5,"team":"順天堂大学","runner":"川原 琉人","grade":"2","time":"0:36:35"},{"rank":6,"team":"創価大学","runner":"衣川 勇太","grade":"1","time":"0:36:42"},{"rank":7,"team":"早稲田大学","runner":"小平 敦之","grade":"3","time":"0:36:43"},{"rank":8,"team":"日本体育大学","runner":"吉田 黎大","grade":"3","time":"0:36:51"},{"rank":9,"team":"帝京大学","runner":"鎗田 大輝","grade":"4","time":"0:36:55"},{"rank":10,"team":"城西大学","runner":"岩田 真之","grade":"4","time":"0:37:03"},{"rank":11,"team":"東海大学","runner":"松山 優太","grade":"1","time":"0:37:08"},{"rank":12,"team":"立教大学","runner":"鈴木 愛音","grade":"2","time":"0:37:19"},{"rank":13,"team":"中央学院大学","runner":"黒谷 優","grade":"4","time":"0:37:28"},{"rank":14,"team":"日本大学","runner":"長澤 辰朗","grade":"2","time":"0:37:51"},{"rank":15,"team":"大東文化大学","runner":"鈴木 要","grade":"1","time":"0:37:56"},{"rank":16,"team":"日本学連選抜","runner":"佐藤 我駆人","grade":"2","time":"0:38:10"},{"rank":17,"team":"関西大学","runner":"岡村 和真","grade":"3","time":"0:38:32"},{"rank":18,"team":"大阪経済大学","runner":"京川 大真","grade":"3","time":"0:38:33"},{"rank":19,"team":"札幌学院大学","runner":"浦田 陽聖","grade":"2","time":"0:38:59"},{"rank":20,"team":"関西学院大学","runner":"冨永 己太朗","grade":"3","time":"0:39:24"},{"rank":21,"team":"岐阜協立大学","runner":"安藤 涼太郎","grade":"2","time":"0:39:27"},{"rank":22,"team":"広島経済大学","runner":"板谷 和磨","grade":"4","time":"0:39:32"},{"rank":23,"team":"信州大学","runner":"三林 明弥","grade":"2","time":"0:39:33"},{"rank":24,"team":"名古屋大学","runner":"松村 公平","grade":"1","time":"0:39:41"},{"rank":25,"team":"志學館大学","runner":"大平 倫嗣","grade":"1","time":"0:40:15"},{"rank":26,"team":"東海学連選抜","runner":"鶴田 燿也","grade":"4","time":"0:40:38"},{"rank":27,"team":"東北学院大学","runner":"阿部 輝翔","grade":"3","time":"0:41:03"}],"6":[{"rank":1,"team":"青山学院大学","runner":"飯田 翔大","grade":"2","time":"0:37:20"},{"rank":2,"team":"駒澤大学","runner":"村上 響","grade":"3","time":"0:37:22"},{"rank":3,"team":"中央大学","runner":"佐藤 大介","grade":"2","time":"0:37:29"},{"rank":4,"team":"國學院大學","runner":"浅野 結太","grade":"2","time":"0:37:35"},{"rank":5,"team":"順天堂大学","runner":"石岡 大侑","grade":"4","time":"0:37:43"},{"rank":6,"team":"帝京大学","runner":"尾崎 仁哉","grade":"4","time":"0:37:56"},{"rank":6,"team":"早稲田大学","runner":"宮岡 凜太","grade":"4","time":"0:37:56"},{"rank":8,"team":"立教大学","runner":"永井 駿","grade":"4","time":"0:38:07"},{"rank":9,"team":"城西大学","runner":"大沼 良太郎","grade":"4","time":"0:38:08"},{"rank":10,"team":"創価大学","runner":"榎木 凜太朗","grade":"2","time":"0:38:36"},{"rank":11,"team":"日本大学","runner":"大仲 竜平","grade":"4","time":"0:38:41"},{"rank":12,"team":"中央学院大学","runner":"三代田 宏太朗","grade":"2","time":"0:38:44"},{"rank":13,"team":"日本学連選抜","runner":"松原 幸之助","grade":"2","time":"0:38:51"},{"rank":14,"team":"日本体育大学","runner":"大竹 雄大","grade":"4","time":"0:38:59"},{"rank":15,"team":"大東文化大学","runner":"上田 翔大","grade":"1","time":"0:39:03"},{"rank":16,"team":"東海大学","runner":"平井 璃空","grade":"2","time":"0:39:22"},{"rank":17,"team":"関西大学","runner":"坂本 亘生","grade":"1","time":"0:39:37"},{"rank":18,"team":"札幌学院大学","runner":"山田 陽翔","grade":"4","time":"0:40:05"},{"rank":19,"team":"名古屋大学","runner":"吉田 和輝","grade":"2","time":"0:40:33"},{"rank":20,"team":"東海学連選抜","runner":"吉田 亘","grade":"4","time":"0:40:35"},{"rank":21,"team":"信州大学","runner":"内田 善登","grade":"3","time":"0:40:42"},{"rank":22,"team":"岐阜協立大学","runner":"長瀬 大起","grade":"4","time":"0:40:46"},{"rank":23,"team":"関西学院大学","runner":"片山 堅友","grade":"2","time":"0:40:54"},{"rank":24,"team":"大阪経済大学","runner":"角野 凌誠","grade":"3","time":"0:41:33"},{"rank":25,"team":"広島経済大学","runner":"田辺 豊","grade":"4","time":"0:42:05"},{"rank":26,"team":"東北学院大学","runner":"齋 優太郎","grade":"3","time":"0:42:06"},{"rank":27,"team":"志學館大学","runner":"岩川 竜武","grade":"1","time":"0:44:56"}],"7":[{"rank":1,"team":"青山学院大学","runner":"黒田 朝日","grade":"4","time":"0:49:31"},{"rank":2,"team":"日本大学","runner":"シャドラック キップケメイ","grade":"3","time":"0:50:17"},{"rank":3,"team":"駒澤大学","runner":"佐藤 圭汰","grade":"4","time":"0:50:26"},{"rank":4,"team":"早稲田大学","runner":"山口 智規","grade":"4","time":"0:50:57"},{"rank":5,"team":"帝京大学","runner":"島田 晃希","grade":"4","time":"0:51:17"},{"rank":6,"team":"中央大学","runner":"岡田 開成","grade":"2","time":"0:51:43"},{"rank":7,"team":"創価大学","runner":"野沢 悠真","grade":"4","time":"0:52:03"},{"rank":7,"team":"日本体育大学","runner":"山崎 丞","grade":"4","time":"0:52:03"},{"rank":9,"team":"國學院大學","runner":"青木 瑠郁","grade":"4","time":"0:52:11"},{"rank":10,"team":"東海大学","runner":"南坂 柚汰","grade":"3","time":"0:52:14"},{"rank":11,"team":"立教大学","runner":"原田 颯大","grade":"3","time":"0:52:15"},{"rank":12,"team":"大東文化大学","runner":"入濵 輝大","grade":"4","time":"0:52:46"},{"rank":13,"team":"中央学院大学","runner":"長部 虎太郎","grade":"2","time":"0:52:50"},{"rank":14,"team":"順天堂大学","runner":"古川 達也","grade":"3","time":"0:53:01"},{"rank":15,"team":"大阪経済大学","runner":"山﨑 真聖","grade":"4","time":"0:53:49"},{"rank":16,"team":"城西大学","runner":"中島 巨翔","grade":"3","time":"0:53:53"},{"rank":17,"team":"志學館大学","runner":"日野 拓夢","grade":"2","time":"0:54:07"},{"rank":18,"team":"札幌学院大学","runner":"伊藤 徹","grade":"4","time":"0:54:29"},{"rank":19,"team":"関西大学","runner":"高村 瑛太","grade":"2","time":"0:55:20"},{"rank":20,"team":"日本学連選抜","runner":"南部 悠陽","grade":"3","time":"0:55:37"},{"rank":21,"team":"関西学院大学","runner":"尼子 和磨","grade":"1","time":"0:55:44"},{"rank":22,"team":"広島経済大学","runner":"藤井 奏汰","grade":"3","time":"0:55:50"},{"rank":23,"team":"名古屋大学","runner":"小川 海里","grade":"1","time":"0:55:55"},{"rank":24,"team":"岐阜協立大学","runner":"友松 悠人","grade":"3","time":"0:56:10"},{"rank":25,"team":"信州大学","runner":"田中 悠貴","grade":"4","time":"0:56:19"},{"rank":26,"team":"東海学連選抜","runner":"脇田 航輝","grade":"2","time":"0:56:56"},{"rank":27,"team":"東北学院大学","runner":"新美 和哉","grade":"3","time":"1:02:36"}],"8":[{"rank":1,"team":"早稲田大学","runner":"工藤 慎作","grade":"3","time":"0:56:54"},{"rank":2,"team":"中央大学","runner":"溜池 一太","grade":"4","time":"0:57:03"},{"rank":3,"team":"駒澤大学","runner":"山川 拓馬","grade":"4","time":"0:57:23"},{"rank":4,"team":"國學院大學","runner":"上原 琉翔","grade":"4","time":"0:57:25"},{"rank":5,"team":"城西大学","runner":"斎藤 将也","grade":"4","time":"0:57:32"},{"rank":6,"team":"創価大学","runner":"山口 翔輝","grade":"2","time":"0:57:53"},{"rank":7,"team":"青山学院大学","runner":"小河原 陽琉","grade":"2","time":"0:58:01"},{"rank":8,"team":"帝京大学","runner":"浅川 侑大","grade":"3","time":"0:58:20"},{"rank":9,"team":"日本大学","runner":"鈴木 孔士","grade":"4","time":"0:58:25"},{"rank":10,"team":"順天堂大学","runner":"小林 侑世","grade":"3","time":"0:58:26"},{"rank":11,"team":"大東文化大学","runner":"松浦 輝仁","grade":"2","time":"0:58:59"},{"rank":12,"team":"立教大学","runner":"國安 広人","grade":"4","time":"0:59:03"},{"rank":13,"team":"名古屋大学","runner":"河﨑 憲祐","grade":"2","time":"0:59:11"},{"rank":14,"team":"岐阜協立大学","runner":"中嶋 希","grade":"3","time":"0:59:48"},{"rank":15,"team":"東海大学","runner":"竹割 真","grade":"4","time":"0:59:53"},{"rank":16,"team":"日本体育大学","runner":"佐藤 大和","grade":"2","time":"0:59:55"},{"rank":17,"team":"日本学連選抜","runner":"赤澤 京弥","grade":"4","time":"1:00:09"},{"rank":18,"team":"信州大学","runner":"松林 直亮","grade":"2","time":"1:00:19"},{"rank":19,"team":"中央学院大学","runner":"林 愛斗","grade":"3","time":"1:00:25"},{"rank":20,"team":"関西学院大学","runner":"嘉味本 謙信","grade":"3","time":"1:00:36"},{"rank":21,"team":"志學館大学","runner":"辻田 鉄人","grade":"2","time":"1:01:05"},{"rank":21,"team":"関西大学","runner":"糟谷 源太","grade":"2","time":"1:00:38"},{"rank":23,"team":"札幌学院大学","runner":"キプゲノ ケネス","grade":"1","time":"1:01:10"},{"rank":24,"team":"大阪経済大学","runner":"野島 清盟","grade":"2","time":"1:02:36"},{"rank":25,"team":"東海学連選抜","runner":"曽越 祐志","grade":"2","time":"1:03:09"},{"rank":26,"team":"広島経済大学","runner":"佐々木 昴","grade":"3","time":"1:03:49"},{"rank":27,"team":"東北学院大学","runner":"児玉 脩平","grade":"2","time":"1:06:40"}]}}]},{"id":"izumo","name":"出雲駅伝","category":"大学駅伝（三大駅伝）","distance_km":45.1,"sections":6,"editions":[{"edition":37,"year":2025,"date":"2025-10-13","source_url":"https://www.iuau.jp/","standings":[{"rank":1,"team":"國學院大學","time":"2:09:12","time_sec":7752,"note":"2連覇"},{"rank":2,"team":"早稲田大学","time":"2:09:50","time_sec":7790,"note":null},{"rank":3,"team":"創価大学","time":"2:10:05","time_sec":7805,"note":null},{"rank":4,"team":"アイビーリーグ選抜","time":"2:10:12","time_sec":7812,"note":null},{"rank":5,"team":"駒澤大学","time":"2:10:27","time_sec":7827,"note":null},{"rank":6,"team":"城西大学","time":"2:10:41","time_sec":7841,"note":null},{"rank":7,"team":"青山学院大学","time":"2:10:52","time_sec":7852,"note":null}],"sections":[{"section":1,"distance_km":8.0,"runner":"岡田開成","grade":"2","team":"中央大学","time":"23:27","time_sec":1407,"note":null},{"section":2,"distance_km":5.8,"runner":"山口智規","grade":"4","team":"早稲田大学","time":"15:57","time_sec":957,"note":null},{"section":3,"distance_km":8.5,"runner":"V.キムタイ","grade":"4","team":"城西大学","time":"23:40","time_sec":1420,"note":null},{"section":4,"distance_km":6.2,"runner":"辻原輝","grade":"3","team":"國學院大學","time":"17:20","time_sec":1040,"note":null},{"section":5,"distance_km":6.4,"runner":"塩出翔太","grade":"4","team":"青山学院大学","time":"17:54","time_sec":1074,"note":null},{"section":6,"distance_km":10.2,"runner":"黒田朝日","grade":"4","team":"青山学院大学","time":"29:15","time_sec":1755,"note":null}],"section_results":{}}]},{"id":"hakone","name":"箱根駅伝","category":"大学駅伝（三大駅伝）","distance_km":217.1,"sections":10,"editions":[{"edition":102,"year":2026,"date":"2026-01-03","source_url":"https://www.rikujyokyogi.co.jp/archives/195265","standings":[{"rank":1,"team":"青山学院大学","time":"10:37:34","time_sec":38254,"note":"大会新・3連覇"},{"rank":2,"team":"國學院大學","time":"10:40:07","time_sec":38407,"note":"大会新"},{"rank":3,"team":"順天堂大学","time":"10:43:55","time_sec":38635,"note":null},{"rank":4,"team":"早稲田大学","time":"10:44:29","time_sec":38669,"note":null},{"rank":5,"team":"中央大学","time":"10:44:31","time_sec":38671,"note":null},{"rank":6,"team":"駒澤大学","time":"10:44:50","time_sec":38690,"note":null},{"rank":7,"team":"城西大学","time":"10:46:17","time_sec":38777,"note":null},{"rank":8,"team":"創価大学","time":"10:51:40","time_sec":39100,"note":null},{"rank":9,"team":"帝京大学","time":"10:53:15","time_sec":39195,"note":null},{"rank":10,"team":"日本大学","time":"10:53:56","time_sec":39236,"note":null}],"sections":[{"section":1,"distance_km":21.3,"runner":"青木瑠郁","grade":"4","team":"國學院大學","time":"1:00:28","time_sec":3628,"note":"区間新"},{"section":2,"distance_km":23.1,"runner":"V.キムタイ","grade":"4","team":"城西大学","time":"1:05:10","time_sec":3910,"note":"区間新"},{"section":3,"distance_km":21.4,"runner":"本間颯","grade":"3","team":"中央大学","time":"1:00:08","time_sec":3608,"note":null},{"section":4,"distance_km":20.9,"runner":"鈴木琉胤","grade":"1","team":"早稲田大学","time":"1:00:01","time_sec":3601,"note":null},{"section":5,"distance_km":20.8,"runner":"黒田朝日","grade":"4","team":"青山学院大学","time":"1:07:16","time_sec":4036,"note":"区間新"},{"section":6,"distance_km":20.8,"runner":"小池莉希","grade":"3","team":"創価大学","time":"56:48","time_sec":3408,"note":null},{"section":7,"distance_km":21.3,"runner":"高山豪起","grade":"4","team":"國學院大學","time":"1:00:54","time_sec":3654,"note":null},{"section":8,"distance_km":21.4,"runner":"塩出翔太","grade":"4","team":"青山学院大学","time":"1:03:45","time_sec":3825,"note":"区間新"},{"section":9,"distance_km":23.1,"runner":"佐藤有一","grade":"4","team":"青山学院大学","time":"1:07:38","time_sec":4058,"note":null},{"section":10,"distance_km":23.0,"runner":"佐藤圭汰","grade":"4","team":"駒澤大学","time":"1:07:31","time_sec":4051,"note":"区間新"}],"section_results":{}}]}]};
+
+const PRIZES = [
+  {id:"ecobag",  name:"RunPredict 限定エコバッグ", cost:1500, emoji:"🛍️", desc:"大会ロゴ入りの大容量コットンエコバッグ。観戦グッズの持ち運びに最適。RunPredict会員限定デザインで、襷カラーのアクセントが入ります。"},
+  {id:"towel",   name:"大会記念マフラータオル", cost:800,  emoji:"🧣", desc:"沿道応援の定番アイテム。吸水性の高いパイル地で、首にかけても応援フラッグとしても使えます。箱根駅伝2026の記念ロゴ入り。"},
+  {id:"badge_g", name:"限定ゴールドデジタルバッジ", cost:500, emoji:"🥇", desc:"マイページのプロフィールに表示できる限定デジタルバッジ。予想王としてのステータスを仲間にアピールできます。"},
+  {id:"cap",     name:"RunPredict ランニングキャップ", cost:1200, emoji:"🧢", desc:"軽量・速乾素材のランニングキャップ。練習日誌を続けるランナーへ。サイズ調整可能なフリーサイズ。"},
+  {id:"premium", name:"プレミアム会員 1ヶ月", cost:3000, emoji:"⭐", desc:"AIスカウトレポートの詳細分析、過去大会の全予想データ閲覧、限定掲示板への参加が1ヶ月間使い放題になります。"},
+  {id:"shoes",   name:"抽選: 厚底シューズ応募券", cost:2000, emoji:"👟", desc:"人気ブランドの厚底レーシングシューズが当たる抽選への応募券。当選者は後日マイページの通知でお知らせします。"},
+];
+
+const SEED_POSTS = [
+  {name:"ユーザーA", c:"#c0392b", t:"35分前", text:"駒澤の往路は固いと思う🔥 みんなの本命どこ？", likes:12, liked:false},
+  {name:"ユーザーC", c:"#27ae60", t:"28分前", text:"青学の5区に期待してる。山登りで一気に来るはず⛰️", likes:8, liked:false},
+  {name:"ユーザーE", c:"#e08e0b", t:"15分前", text:"國學院ダークホースで3位以内に入れて予想した。当たれば+150pt🙏", likes:5, liked:false},
+  {name:"ユーザーB", c:"#2980b9", t:"6分前", text:"AIスカウトの山田蓮、ラストスパート94はえぐいな…", likes:3, liked:false},
+];
+
+const ALL_BADGES = [
+  {id:"first_login", e:"🎫", n:"新規登録"},
+  {id:"first_predict", e:"🎯", n:"初予想"},
+  {id:"perfect1", e:"👑", n:"優勝的中"},
+  {id:"high_score", e:"🔥", n:"100pt超え"},
+  {id:"diarist", e:"📔", n:"練習日誌"},
+  {id:"legmaster", e:"🎽", n:"区間予想"},
+  {id:"collector", e:"🎁", n:"景品交換"},
+];
+
+const LEADERBOARD = [
+  {name:"ユーザーA", pts:1725, c:"#c0392b"},
+  {name:"ユーザーB", pts:1655, c:"#2980b9"},
+  {name:"ユーザーC", pts:1480, c:"#27ae60"},
+  {name:"ユーザーD", pts:1245, c:"#8e44ad"},
+  {name:"ユーザーE", pts:1155, c:"#e08e0b"},
+  {name:"ユーザーF", pts:950, c:"#16a085"},
+];
+
+const SCOUTS = [
+  {name:"山田 蓮", team:"青山学院大学 4年・エース区間",
+   stats:{スピード:88,スタミナ:82,ラストスパート:94,安定感:76,メンタル:90},
+   report:"正攻法の展開しつつ<b>ラスト1kmの勝負強さ</b>が際立つ。残り300mからのギアチェンジは学生トップクラス。大ブレーキのリスクが低く、エース区間で計算できるランナー。"},
+  {name:"佐藤 大地", team:"駒澤大学 3年・登り区間",
+   stats:{スピード:80,スタミナ:95,ラストスパート:72,安定感:91,メンタル:84},
+   report:"スタミナと<b>安定感</b>が武器。山登りでも失速が少なく、淡々と刻むイーブンペースが持ち味。終盤の爆発力は控えめだが、区間順位を大きく崩さない堅実型。"},
+  {name:"鈴木 颯", team:"國學院大學 2年・スピードランナー",
+   stats:{スピード:96,スタミナ:74,ラストスパート:85,安定感:70,メンタル:78},
+   report:"圧倒的な<b>スピード</b>で前半から飛ばす攻撃型。短い区間ほど真価を発揮する。スタミナ面に課題があり、ロング区間では後半の落ち込みに注意。伸びしろは大きい。"},
+];
+
+/* =================== PERSISTENCE (best effort) =================== */
+const KEY="runpredict_v1";
+async function save(){ try{ if(window.storage) await window.storage.set(KEY, JSON.stringify({points:state.points,predictions:state.predictions,legPredictions:state.legPredictions,ownedPrizes:state.ownedPrizes,badges:state.badges,diaries:state.diaries,posts:state.posts,premium:state.premium,goal:state.goal}), false);}catch(e){} }
+async function load(){ try{ if(window.storage){const r=await window.storage.get(KEY,false); if(r&&r.value){const d=JSON.parse(r.value);Object.assign(state,d);}}}catch(e){} }
+
+/* =================== NAV =================== */
+function go(s, isBack){
+  document.querySelectorAll(".screen").forEach(e=>{e.classList.remove("active");e.classList.remove("back");});
+  const el=document.getElementById("s-"+s);
+  if(isBack)el.classList.add("back");
+  el.classList.add("active");
+  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on", b.dataset.s===s));
+  el.scrollTop=0;
+  if(s==="home")renderHome();
+  if(s==="ranking")renderRanking();
+  if(s==="prizes")renderPrizes();
+  if(s==="mypage")renderMypage();
+  if(s==="scout")renderScout(0);
+  if(s==="analysis")renderAnalysis();
+  if(s==="community")commTab(commCur);
+}
+function goBack(s){ go(s, true); }
+function goPredictDefault(){ openTournament("hakone103"); }
+
+/* =================== HOME =================== */
+let curFilter="open";
+function renderHome(){
+  document.getElementById("home-pt").textContent=state.points.toLocaleString();
+  const q=(document.getElementById("tsearch").value||"").trim();
+  const list=document.getElementById("tlist"); list.innerHTML="";
+  if(curFilter==="done"){
+    const rows=[];
+    RESULTS_DB.tournaments.forEach(t=>t.editions.forEach(e=>rows.push({t,e})));
+    const hit=rows.filter(({t,e})=>{
+      if(!q)return true;
+      const hay=`${t.name} 第${e.edition}回 ${e.year} ${t.category} `+
+        e.standings.map(s=>s.team).join(" ")+" "+(e.sections||[]).map(s=>s.runner+s.team).join(" ");
+      return hay.includes(q);
+    });
+    hit.forEach(({t,e})=>{
+      const champ=e.standings[0];
+      const el=document.createElement("div"); el.className="tcard"; el.onclick=()=>openResult(t.id,e.year);
+      el.innerHTML=`<div class="badge done"><span>終了</span></div><div class="tlogo">${t.name.slice(0,2)}<br>${e.year}</div>
+        <div class="info"><h3>${t.name} 第${e.edition}回</h3><div class="meta">${e.date}・${t.distance_km}km/${t.sections}区間</div>
+        <span class="status st-done">優勝 ${champ.team}・${champ.time}</span></div><div class="go">›</div>`;
+      list.appendChild(el);
+    });
+    if(!list.children.length) list.innerHTML='<div class="empty">該当する過去大会はありません。<br>大会名・年・チーム名・選手名で検索できます。</div>';
+    return;
+  }
+  TOURNAMENTS.filter(t=>(t.status==="open"||t.status==="live") && (!q||t.name.includes(q)||t.sub.includes(q))).forEach(t=>{
+    const pred=state.predictions[t.id];
+    let pill, corner;
+    if(t.live){
+      pill = pred&&pred.scored?'<span class="status st-done">結果を見る</span>'
+           : pred&&pred.voted?'<span class="status st-soon">投票済み・速報待ち</span>'
+           : '<span class="status st-live2">レース中</span>';
+      corner='<div class="badge live"><span>LIVE</span></div>';
+    }else{
+      pill = pred?'<span class="status st-done">予想済み</span>':'<span class="status st-live">予想受付中</span>';
+      corner='<div class="badge live"><span>受付</span></div>';
+    }
+    const el=document.createElement("div"); el.className="tcard"; el.onclick=()=>openTournament(t.id);
+    el.innerHTML=`${corner}<div class="tlogo">${t.logo}</div>
+      <div class="info"><h3>${t.name}</h3><div class="meta">${t.sub}・${t.date}</div>${pill}</div>
+      <div class="go">›</div>`;
+    list.appendChild(el);
+  });
+  if(!list.children.length) list.innerHTML='<div class="empty">該当する大会はありません。<br>検索ワードを変えてみてください。</div>';
+}
+function filterT(btn,f){curFilter=f;btn.parentElement.querySelectorAll("button").forEach(b=>b.classList.remove("on"));btn.classList.add("on");renderHome();}
+let curResult=null, resultTab='total', openResSec=null;
+function toggleResSec(n){ openResSec = openResSec===n? null : n; renderResult(); }
+function fullSecTable(list){
+  let r=`<div class="rtable"><div class="rh"><div style="width:30px">区順</div><div style="flex:1">チーム・選手</div><div>区間タイム</div></div>`;
+  list.forEach(x=>{
+    const cls=x.rank===1?'gold':x.rank===2?'silver':x.rank===3?'bronze':'';
+    r+=`<div class="rrow"><div class="rk ${cls}" style="font-size:14px">${x.rank}</div>
+      <div class="rrun"><b>${x.runner||x.team}</b><span>${x.team}${x.grade?'・'+x.grade+'年':''}</span></div>
+      <div class="rtime">${x.time}</div></div>`;
+  });
+  r+=`</div>`;
+  return r;
+}
+function openResult(tid,year){
+  const t=RESULTS_DB.tournaments.find(x=>x.id===tid); if(!t)return;
+  const e=t.editions.find(x=>x.year===year)||t.editions[0];
+  curResult={t,e}; resultTab='total'; openResSec=null;
+  document.getElementById("hi-title").textContent=`${t.name} 第${e.edition}回`;
+  document.getElementById("hi-sub").textContent=`${e.year}年・${t.category}`;
+  renderResult();
+  go("history");
+}
+function setResultTab(tab){ resultTab=tab; openResSec=null; renderResult(); }
+function renderResult(){
+  const {t,e}=curResult;
+  const champ=e.standings[0];
+  const hasSec=e.sections && e.sections.length;
+  const cp=champ.time.split(":");
+  let html=`<div class="scoreboard"><div class="ttl">総合優勝</div>
+      <div style="font-size:22px;font-weight:900;color:#fff;position:relative;margin:7px 0 2px">${champ.team}</div>
+      <div class="pts num" style="font-size:42px">${cp[0]}<small>:${cp.slice(1).join(":")}</small></div>
+      ${champ.note?`<div class="msg" style="color:#f3cf6a;position:relative">🏅 ${champ.note}</div>`:''}</div>`;
+
+  html+=`<div class="rtab"><button class="${resultTab==='total'?'on':''}" onclick="setResultTab('total')">総合順位</button>`;
+  if(hasSec) html+=`<button class="${resultTab==='sec'?'on':''}" onclick="setResultTab('sec')">区間賞</button>`;
+  html+=`</div>`;
+
+  if(resultTab==='total'){
+    let r=`<div class="rtable"><div class="rh"><div style="width:30px">順位</div><div style="flex:1">チーム</div><div>記録</div></div>`;
+    e.standings.forEach(s=>{
+      const cls=s.rank===1?'gold':s.rank===2?'silver':s.rank===3?'bronze':'';
+      r+=`<div class="rrow"><div class="rk ${cls}">${s.rank}</div>
+        <div class="rteam">${s.team}${s.note?`<span class="rnote">${s.note}</span>`:''}</div>
+        <div class="rtime">${s.time}</div></div>`;
+    });
+    r+=`</div>`;
+    html+=r;
+  } else {
+    let r=`<div class="sub-note" style="margin-bottom:10px">各区の区間賞を表示。<b style="color:var(--track)">全◯チーム</b>の区間はタップで全記録（区間順位）を展開できます。</div>`;
+    e.sections.forEach(s=>{
+      const full = e.section_results && e.section_results[String(s.section)];
+      const open = openResSec===s.section;
+      r+=`<div class="leg-card ${open?'open':''}">
+        <div class="leg-head2" ${full?`onclick="toggleResSec(${s.section})"`:'style="cursor:default"'}>
+          <div><span class="leg-no">${s.section}区</span> <span class="leg-route">${s.distance_km}km</span>
+            <div class="leg-note">🏅区間賞 ${s.runner}（${s.team}）${s.time}${s.note?' '+s.note:''}</div></div>
+          <div class="leg-right">${full?`<span class="leg-stat done">全${full.length}チーム ›</span><span class="chev">${open?'▴':'▾'}</span>`:'<span class="leg-stat todo">区間賞のみ</span>'}</div>
+        </div>
+        ${(open&&full)?`<div class="leg-body">${fullSecTable(full)}</div>`:''}
+      </div>`;
+    });
+    html+=r;
+  }
+
+  // 箱根のみ過去10年の優勝タイム推移を併記
+  if(t.id==='hakone'){
+    html+=`<div class="eyebrow" style="margin-top:18px">過去10年の優勝タイム推移</div>
+      <div class="panel chart">${historySvg(e.year)}
+      <div class="legend"><span><i style="background:#2E7D52"></i>青山学院</span><span><i style="background:#1b3a8f"></i>駒澤</span><span><i style="background:#0a6cb0"></i>東海</span></div></div>`;
+  }
+  html+=`<div class="src-note">出典: ${e.source_url||'各競技連盟・報道'}（Pythonパイプラインで自動収集）</div>`;
+  document.getElementById("hi-body").innerHTML=html;
+  document.getElementById("s-history").scrollTop=0;
+}
+
+/* =================== PREDICT =================== */
+let curT=null, picks=[], legDraft={}, legOpenN=null, curMode='total';
+function openTournament(id){
+  curT=TOURNAMENTS.find(t=>t.id===id); if(!curT)return;
+  const pred=state.predictions[id];
+  picks = (pred && pred.order)? [...pred.order] : [];
+  legDraft={}; legOpenN=null;
+  curMode='total';
+  document.getElementById("pre-title").textContent=curT.name;
+  document.getElementById("pre-sub").textContent=curT.sub;
+  renderPredict();
+  go("predict");
+}
+
+function renderPredict(){
+  const pred=state.predictions[curT.id];
+  const locked = !!(pred && pred.voted && !pred.scored);
+  document.getElementById("pre-name").textContent=curT.name+(curT.live?" 優勝・着順予想":" 着順予想");
+  document.getElementById("pre-leg").textContent = curT.live ? ("🔴 LIVE ・ "+curT.leg) : "区間総合 / 着順予想";
+  document.getElementById("pre-hint").textContent = curT.live
+    ? "レース中！ゴール時点の上位3チームを予想して投票しよう。"
+    : "上位3チームの着順を予想 → 的中でポイント獲得。";
+  // live standings
+  document.getElementById("live-box").innerHTML = curT.live ? liveBoxHtml() : "";
+  // data panels (course + history)
+  document.getElementById("data-box").innerHTML = curT.hasData ? dataPanelsHtml() : "";
+  document.getElementById("preview-box").innerHTML = "";
+
+  const scored = !!(pred && pred.scored);
+  const pool=document.getElementById("pool"), poolTitle=document.querySelector(".pool-title");
+  const btn=document.getElementById("submit-pre"), vbox=document.getElementById("vote-box");
+  if(scored){
+    renderSlots(true);
+    pool.style.display="none"; poolTitle.style.display="none"; btn.style.display="none";
+    vbox.innerHTML=`<div class="panel" style="margin-top:14px"><div class="pt-row"><h4>✅ 総合予想は確定済み</h4><span class="leg-pill">+${pred.earned}pt</span></div>
+      <div class="sub-note">ゴール結果に基づき採点済みです。</div></div>
+      <button class="cta blue" onclick="showResult('${curT.id}')">総合結果の詳細を見る</button>`;
+  } else if(locked){
+    renderSlots(true);
+    pool.style.display="none"; poolTitle.style.display="none";
+    btn.style.display="none"; vbox.innerHTML=votedHtml(); requestAnimationFrame(animateVotes);
+  } else {
+    renderSlots(false);
+    pool.style.display="flex"; poolTitle.style.display="block"; renderPool();
+    btn.style.display="block"; vbox.innerHTML="";
+    btn.textContent=curT.live?"この順位で投票する 🗳️":"予想を確定する"; btn.disabled=picks.length!==SLOTS;
+  }
+
+  // mode toggle + leg view
+  const showToggle=!!curT.legResults;
+  document.getElementById("mode-toggle").style.display=showToggle?"flex":"none";
+  if(showToggle) renderLeg();
+  applyMode();
+}
+function applyMode(){
+  document.getElementById("mode-total").style.display=curMode==='total'?'block':'none';
+  document.getElementById("mode-leg").style.display=curMode==='leg'?'block':'none';
+  document.getElementById("mode-total-btn").classList.toggle("on",curMode==='total');
+  document.getElementById("mode-leg-btn").classList.toggle("on",curMode==='leg');
+}
+function switchMode(m){ curMode=m; applyMode(); document.getElementById("s-predict").scrollTop=0; }
+
+/* ---- 区間別・順位別 予想（各区を個別に投票） ---- */
+const SEC_RANKS=[1,2,3];
+function legState(){ if(!state.legPredictions[curT.id]) state.legPredictions[curT.id]={sections:{}}; if(!state.legPredictions[curT.id].sections) state.legPredictions[curT.id].sections={}; return state.legPredictions[curT.id].sections; }
+function renderLeg(){
+  const box=document.getElementById("mode-leg");
+  const secs=legState();
+  if(legOpenN===null){ const first=COURSE.find(c=>!secs[c.n]); legOpenN=first?first.n:COURSE[0].n; }
+  const votedCount=Object.values(secs).filter(s=>s.scored).length;
+  const totalEarned=Object.values(secs).reduce((a,s)=>a+(s.scored?s.earned:0),0);
+  let cards="";
+  COURSE.forEach(c=>{
+    const sec=secs[c.n], open=legOpenN===c.n;
+    let status;
+    if(sec&&sec.scored){ const champ=curT.teams.find(t=>t.id===curT.legOrders[c.n-1][0]); status=`<span class="leg-stat done">投票済み +${sec.earned}pt</span>`; }
+    else status=`<span class="leg-stat todo">未投票</span>`;
+    let body="";
+    if(open){
+      const info=secCourseHtml(c.n);
+      if(sec&&sec.scored) body=`<div class="leg-body">${info}${sectionResultRows(c.n,sec)}</div>`;
+      else body=`<div class="leg-body">${info}<div class="sec-sub" style="margin-top:14px">🏁 順位を予想（1〜3位）</div>${rankSelectors(c.n)}${sectionVoteBtn(c.n)}</div>`;
+    }
+    cards+=`<div class="leg-card ${open?'open':''}">
+      <div class="leg-head2" onclick="toggleSec(${c.n})">
+        <div><span class="leg-no">${c.name}</span> <span class="leg-route">${c.route}・${c.km}km</span><div class="leg-note">${c.leg}・${c.note}</div></div>
+        <div class="leg-right">${status}<span class="chev">${open?'▴':'▾'}</span></div>
+      </div>${body}</div>`;
+  });
+  box.innerHTML=`<div class="panel" style="margin-bottom:12px"><div class="pt-row"><h4>🎽 区間別・順位別予想</h4><span class="leg-pill">${votedCount}/${COURSE.length} 投票・+${totalEarned}pt</span></div>
+      <div class="sub-note">各区間で1〜3位を予想し、区間ごとに個別で投票。順位的中＝+12pt / 1つ差＝+6 / 2つ差＝+3、区間賞的中でさらに+8pt。</div></div>${cards}`;
+}
+function toggleSec(n){ legOpenN = legOpenN===n? null : n; renderLeg(); document.getElementById("s-predict").scrollTop=document.querySelector(".leg-card.open")?.offsetTop-80||0; }
+function secElevSvg(n){
+  const c=COURSE[n-1], pts=SECDATA[n].elev;
+  const W=300,H=66,pL=4,pR=4,pT=10,pB=4;
+  const maxE=Math.max(...pts.map(p=>p[1]),50)*1.12, km=c.km;
+  const X=d=>pL+d/km*(W-pL-pR), Y=e=>H-pB-e/maxE*(H-pB-pT), base=H-pB;
+  const line=pts.map((p,i)=>(i?'L':'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)).join(' ');
+  const area=`M${X(0)} ${base} `+pts.map(p=>'L'+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)).join(' ')+` L${X(km)} ${base} Z`;
+  const col=c.leg==='往路'?'#c0392b':'#1b3a8f';
+  const mx=pts.reduce((a,p)=>p[1]>a[1]?p:a,pts[0]);
+  let peak='';
+  if(mx[1]>=100) peak=`<circle cx="${X(mx[0]).toFixed(1)}" cy="${Y(mx[1]).toFixed(1)}" r="2.6" fill="${col}"/><text x="${X(mx[0]).toFixed(1)}" y="${(Y(mx[1])-3).toFixed(1)}" text-anchor="middle" font-size="8" font-weight="700" fill="${col}">${mx[1]}m</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}"><defs><linearGradient id="sg${n}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".32"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>
+    <path d="${area}" fill="url(#sg${n})"/><path d="${line}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round"/>${peak}</svg>`;
+}
+function secCourseHtml(n){
+  const c=COURSE[n-1], rec=SECDATA[n].record, ends=c.route.split('→');
+  const col=c.leg==='往路'?'#c0392b':'#1b3a8f';
+  return `<div class="sec-info">
+    <div class="sec-sub">📈 勾配図（${c.km}km・${c.leg}）</div>
+    <div class="chart">${secElevSvg(n)}</div>
+    <div class="route-strip"><span class="rs-dot" style="background:${col}"></span><span class="rs-end">${ends[0]}</span><span class="rs-line"></span><span class="rs-km">${c.km}km ▸</span><span class="rs-line"></span><span class="rs-end">${ends[1]}</span><span class="rs-dot" style="background:${col}"></span></div>
+    <div class="sec-rec">🏅 区間記録 <b>${rec.time}</b> ${rec.holder} <span class="sec-yr">${rec.year}</span></div>
+    <div class="sec-note2">${c.note}</div>
+  </div>`;
+}
+function rankSelectors(n){
+  const d=legDraft[n]||{};
+  return SEC_RANKS.map(r=>{
+    const chosen=d[r]||"";
+    // 同じ区間で他の順位に選ばれたチームは除外
+    const taken=SEC_RANKS.filter(x=>x!==r).map(x=>d[x]).filter(Boolean);
+    const opts='<option value="">'+r+'位を予想…</option>'+curT.teams.filter(t=>!taken.includes(t.id)).map(t=>`<option value="${t.id}" ${chosen===t.id?'selected':''}>${t.name}</option>`).join("");
+    const medal=`rank-medal ${r===1?'r1':r===2?'r2':'r3'}`;
+    return `<div class="rank-row"><div class="${medal}" style="width:26px;height:26px;font-size:13px">${r}</div><select class="leg-sel" onchange="setRank(${n},${r},this.value)">${opts}</select></div>`;
+  }).join("");
+}
+function sectionVoteBtn(n){
+  const d=legDraft[n]||{};
+  const ready=SEC_RANKS.every(r=>d[r]);
+  return `<button class="cta blue" style="margin-top:6px" ${ready?'':'disabled'} onclick="submitSection(${n})">この区間を投票する</button>`;
+}
+function setRank(n,r,v){ if(!legDraft[n])legDraft[n]={}; if(v)legDraft[n][r]=v; else delete legDraft[n][r]; renderLeg(); }
+function scoreSection(picks,order){
+  let earned=0,champHit=false; const rows=[];
+  SEC_RANKS.forEach(r=>{
+    const tid=picks[r], actual=order.indexOf(tid)+1; let pt=0;
+    if(actual>0){ const diff=Math.abs(r-actual); pt= diff===0?12:diff===1?6:diff===2?3:0; }
+    if(r===1&&actual===1){ pt+=8; champHit=true; }
+    earned+=pt; rows.push({tid,predRank:r,actRank:actual,pt});
+  });
+  return {earned,rows,champHit};
+}
+function submitSection(n){
+  const d=legDraft[n]; if(!d||!SEC_RANKS.every(r=>d[r]))return;
+  const s=scoreSection(d,curT.legOrders[n-1]);
+  legState()[n]={picks:{...d},scored:true,earned:s.earned,rows:s.rows,champHit:s.champHit};
+  state.points+=s.earned; addBadge("legmaster"); save();
+  // 次の未投票区間へ
+  const next=COURSE.find(c=>c.n>n && !legState()[c.n]); legOpenN=next?next.n:n;
+  renderLeg();
+  toast(`${COURSE[n-1].name} 投票完了！ +${s.earned}pt 🎽`);
+}
+function sectionResultRows(n,sec){
+  const order=curT.legOrders[n-1];
+  let rows="";
+  sec.rows.forEach(r=>{
+    const pT=curT.teams.find(t=>t.id===r.tid);
+    const hit=r.actRank===r.predRank;
+    rows+=`<div class="row"><div class="c-rank" style="width:34px"><span class="rank-medal ${r.predRank===1?'r1':r.predRank===2?'r2':'r3'}" style="width:22px;height:22px;font-size:12px;display:inline-grid">${r.predRank}</span></div>
+      <div class="c-team" style="font-size:12.5px">${pT?pT.name:'—'}${hit?'<span class="tag-hit">的中</span>':''}</div>
+      <div class="c-act" style="width:48px">${r.actRank>0?r.actRank+'位':'圏外'}</div>
+      <div class="c-pt ${r.pt>0?'hit':'miss'}">${r.pt>0?'+'+r.pt:0}</div></div>`;
+  });
+  const champ=curT.teams.find(t=>t.id===order[0]);
+  return `<div class="cmp" style="margin:0"><div class="hrow"><div class="c-rank" style="width:34px">予想</div><div class="c-team">チーム</div><div class="c-act" style="width:48px">実順位</div><div class="c-pt">獲得</div></div>${rows}</div>
+    <div class="sub-note">区間賞：<b style="color:var(--ink)">${champ?champ.name:''}</b>${sec.champHit?'（的中 +8pt）':''} ／ この区間の獲得：<b style="color:var(--track)">+${sec.earned}pt</b></div>`;
+}
+function renderSlots(locked){
+  const slots=document.getElementById("slots"); slots.innerHTML="";
+  for(let i=0;i<SLOTS;i++){
+    const tid=picks[i], team=tid?curT.teams.find(t=>t.id===tid):null;
+    const medal=`rank-medal ${i===0?'r1':i===1?'r2':i===2?'r3':''}`;
+    const div=document.createElement("div"); div.className="slot"+(team?"":" empty");
+    div.innerHTML=`<div class="${medal}">${i+1}</div>`+
+      (team?`<div class="nm">${team.name}</div>${locked?'':`<button class="rm" onclick="unpick(${i})">外す</button>`}`
+           :`<div class="ph">${i+1}位を予想…</div>`);
+    slots.appendChild(div);
+  }
+}
+function renderPool(){
+  const pool=document.getElementById("pool"); pool.innerHTML="";
+  curT.teams.forEach(t=>{
+    const used=picks.includes(t.id);
+    const c=document.createElement("div"); c.className="chip"+(used?" used":"");
+    c.innerHTML=`<span class="dot" style="background:${t.c}"></span>${t.name}`;
+    c.onclick=()=>pick(t.id); pool.appendChild(c);
+  });
+}
+function pick(id){ if(picks.includes(id)||picks.length>=SLOTS)return; picks.push(id); renderPredict(); }
+function unpick(i){ picks.splice(i,1); renderPredict(); }
+
+/* ---- live standings panel ---- */
+function liveBoxHtml(){
+  let rows="";
+  curT.standings.forEach((s,i)=>{
+    const t=curT.teams.find(x=>x.id===s.id);
+    rows+=`<div class="std"><div class="sr">${i+1}</div><div class="sc" style="background:${t.c}"></div>
+      <div class="sn">${t.name}</div><div class="sg ${i===0?'lead':''}">${s.gap}</div></div>`;
+  });
+  return `<div class="panel"><div class="pt-row"><h4>📡 途中経過（速報）</h4><span class="leg-pill">${curT.leg}</span></div>${rows}
+    <div class="sub-note">先頭との差。順位はゴールまで変動します。あなたの「最終順位」を予想しよう。</div></div>`;
+}
+
+/* ---- course profile + history panels ---- */
+function dataPanelsHtml(){
+  let segs="";
+  COURSE.forEach(c=>{ segs+=`<span style="font-size:10px;color:${c.leg==='往路'?'#c0392b':'#1b3a8f'};font-weight:700;margin-right:7px">${c.name} ${c.km}km</span>`; });
+  return `
+  <div class="panel chart">
+    <div class="pt-row"><h4>🗻 コース高低図（全10区・217.1km）</h4></div>
+    ${courseSvg()}
+    <div class="sub-note">${segs}</div>
+  </div>
+  <div class="panel chart">
+    <div class="pt-row"><h4>📈 過去10年の優勝タイム（実データ）</h4></div>
+    ${historySvg()}
+    <div class="legend"><span><i style="background:#2E7D52"></i>青山学院</span><span><i style="background:#1b3a8f"></i>駒澤</span><span><i style="background:#0a6cb0"></i>東海</span></div>
+    <div class="sub-note" style="text-align:center">上にいくほど速い。直近は10時間37〜45分台の高速決着。</div>
+  </div>`;
+}
+function courseSvg(){
+  const W=330,H=120,pL=4,pR=4,pT=8,pB=14, maxKm=217.1,maxE=900;
+  const X=km=>pL+km/maxKm*(W-pL-pR), Y=e=>H-pB-e/maxE*(H-pB-pT), base=H-pB;
+  let line=ELEV.map((p,i)=>(i?"L":"M")+X(p[0]).toFixed(1)+" "+Y(p[1]).toFixed(1)).join(" ");
+  const area=`M${X(0)} ${base} `+ELEV.map(p=>"L"+X(p[0]).toFixed(1)+" "+Y(p[1]).toFixed(1)).join(" ")+` L${X(maxKm)} ${base} Z`;
+  const peakX=X(102.9),peakY=Y(874);
+  const splitX=X(107.5);
+  return `<svg viewBox="0 0 ${W} ${H}">
+    <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2B5FD9" stop-opacity=".35"/><stop offset="1" stop-color="#2B5FD9" stop-opacity="0"/></linearGradient></defs>
+    <line x1="${splitX}" y1="${pT}" x2="${splitX}" y2="${base}" stroke="#D7263D" stroke-width="1" stroke-dasharray="3 3"/>
+    <path d="${area}" fill="url(#cg)"/>
+    <path d="${line}" fill="none" stroke="#13223F" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="${peakX}" cy="${peakY}" r="3.2" fill="#D7263D"/>
+    <text x="${peakX}" y="${peakY-5}" text-anchor="middle" font-size="9" font-weight="700" fill="#D7263D">5区 874m</text>
+    <text x="${splitX-3}" y="${base-2}" text-anchor="end" font-size="8" fill="#c0392b">往路</text>
+    <text x="${splitX+3}" y="${base-2}" font-size="8" fill="#1b3a8f">復路</text>
+    <text x="${pL}" y="${base+11}" font-size="8" fill="#7A879C">大手町</text>
+    <text x="${splitX}" y="${pT+2}" text-anchor="middle" font-size="8" fill="#7A879C">芦ノ湖</text>
+    <text x="${W-pR}" y="${base+11}" text-anchor="end" font-size="8" fill="#7A879C">大手町</text>
+  </svg>`;
+}
+function colorOf(win){return win.includes("青山")?"#2E7D52":win.includes("駒澤")?"#1b3a8f":win.includes("東海")?"#0a6cb0":"#888";}
+function historySvg(hl){
+  const W=330,H=130,pL=8,pR=8,pT=14,pB=22;
+  const data=[...HISTORY].sort((a,b)=>a.year-b.year);
+  const secs=data.map(d=>d.sec), sMin=Math.min(...secs), sMax=Math.max(...secs), n=data.length;
+  const X=i=>pL+i/(n-1)*(W-pL-pR);
+  const Y=s=>pT+(s-sMin)/(sMax-sMin)*(H-pT-pB); // fast(sMin)=top
+  const line=data.map((d,i)=>(i?"L":"M")+X(i).toFixed(1)+" "+Y(d.sec).toFixed(1)).join(" ");
+  let dots="",labels="";
+  data.forEach((d,i)=>{
+    const x=X(i),y=Y(d.sec),isHl=hl&&d.year===hl;
+    dots+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${isHl?5:3.2}" fill="${colorOf(d.win)}" ${isHl?'stroke="#E0A52B" stroke-width="2"':''}/>`;
+    if(i%2===0||isHl) labels+=`<text x="${x.toFixed(1)}" y="${H-7}" text-anchor="middle" font-size="8" fill="#7A879C">'${String(d.year).slice(2)}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}">
+    <text x="${pL}" y="${pT-3}" font-size="8" fill="#1FA363">↑速い ${data.find(d=>d.sec===sMin).t}</text>
+    <text x="${pL}" y="${H-pB+10}" font-size="8" fill="#c0392b">↓遅い ${data.find(d=>d.sec===sMax).t}</text>
+    <path d="${line}" fill="none" stroke="#cdd5e1" stroke-width="2"/>
+    ${dots}${labels}
+  </svg>`;
+}
+
+/* ---- community vote ---- */
+function votedHtml(){
+  const pred=state.predictions[curT.id], myWin=pred.order[0];
+  const vote={...curT.vote}; vote[myWin]=(vote[myWin]||0)+3; // 自分の票を加算
+  const total=Object.values(vote).reduce((a,b)=>a+b,0);
+  const sorted=Object.entries(vote).map(([id,v])=>({id,pct:Math.round(v/total*100)})).sort((a,b)=>b.pct-a.pct).slice(0,6);
+  let bars="";
+  sorted.forEach(s=>{
+    const t=curT.teams.find(x=>x.id===s.id); const mine=s.id===myWin;
+    bars+=`<div class="vbar ${mine?'mine':''}"><div class="vt"><span>${t.name}${mine?' ★あなたの本命':''}</span><span class="vp">${s.pct}%</span></div>
+      <div class="track"><div class="fill" data-w="${s.pct}" style="width:0;background:${t.c}"></div></div></div>`;
+  });
+  return `<div class="panel" style="margin-top:16px">
+    <div class="pt-row"><h4>🗳️ みんなの優勝予想（投票結果）</h4></div>${bars}
+    <div class="sub-note">投票を受け付けました。ゴール後に結果が判定され、ポイントが付与されます。</div>
+  </div>
+  <button class="cta" onclick="revealFinish()">🏁 ゴール速報を見る（結果判定）</button>`;
+}
+function animateVotes(){ document.querySelectorAll("#vote-box .fill").forEach(f=>{ f.style.width=f.dataset.w+"%"; }); }
+
+/* ---- scoring ---- */
+function scorePrediction(order,result){
+  let earned=0,perfect=false; const rows=[];
+  order.forEach((tid,i)=>{
+    const predRank=i+1, actRank=result.indexOf(tid)+1, diff=Math.abs(predRank-actRank);
+    let pt=diff===0?50:diff===1?25:diff===2?12:diff===3?6:0;
+    if(diff===0&&predRank===1){pt+=50;perfect=true;}
+    earned+=pt; rows.push({tid,predRank,actRank,pt,hit:diff===0});
+  });
+  return {earned,perfect,rows};
+}
+function awardBadges(s){ addBadge("first_predict"); if(s.perfect)addBadge("perfect1"); if(s.earned>=100)addBadge("high_score"); }
+
+function submitPrediction(){
+  if(picks.length!==SLOTS)return;
+  if(curT.live){
+    state.predictions[curT.id]={order:[...picks],voted:true};
+    save(); renderPredict(); toast("予想を投票しました 🗳️");
+    setTimeout(()=>document.getElementById("vote-box").scrollIntoView({behavior:"smooth",block:"start"}),120);
+    return;
+  }
+  const s=scorePrediction(picks,curT.result);
+  state.predictions[curT.id]={order:[...picks],scored:true,...s};
+  state.points+=s.earned; awardBadges(s); save();
+  showResult(curT.id,true);
+}
+function revealFinish(){
+  const pred=state.predictions[curT.id];
+  const s=scorePrediction(pred.order,curT.result);
+  Object.assign(pred,{scored:true,...s});
+  state.points+=s.earned; awardBadges(s); save();
+  showResult(curT.id,true);
+}
+
+function showResult(id, animate){
+  const t=TOURNAMENTS.find(x=>x.id===id); curT=t;
+  const p=state.predictions[id];
+  document.getElementById("res-sub").textContent=t.name;
+  document.getElementById("res-msg").textContent =
+    p.perfect?"🎉 優勝チーム的中！パーフェクトボーナス +50pt":
+    p.earned>=120?"お見事！高精度の予想です":
+    p.earned>=60?"なかなかの的中率です":"次回はもっと当てよう！";
+  const body=document.getElementById("cmp-body"); body.innerHTML="";
+  p.rows.forEach(r=>{
+    const team=t.teams.find(x=>x.id===r.tid);
+    const medal=`rank-medal ${r.predRank===1?'r1':r.predRank===2?'r2':r.predRank===3?'r3':''}`;
+    const row=document.createElement("div"); row.className="row";
+    row.innerHTML=`<div class="c-rank"><span class="${medal}" style="width:24px;height:24px;font-size:13px;display:inline-grid">${r.predRank}</span></div>
+      <div class="c-team">${team.name}${r.hit?'<span class="tag-hit">的中</span>':''}</div>
+      <div class="c-act ${r.hit?'hit':'miss'}">${r.actRank}位</div>
+      <div class="c-pt ${r.pt>0?'hit':'miss'}">${r.pt>0?'+'+r.pt:0}</div>`;
+    body.appendChild(row);
+  });
+  go("result");
+  // count up animation
+  const target=p.earned, el=document.getElementById("res-pt");
+  if(animate){let n=0;const step=Math.max(1,Math.ceil(target/30));const iv=setInterval(()=>{n+=step;if(n>=target){n=target;clearInterval(iv);}el.textContent=n;},28);}
+  else el.textContent=target;
+}
+
+/* =================== RANKING =================== */
+function renderRanking(){
+  const me={name:"ランナー太郎(あなた)",pts:state.points,c:"#13223F",me:true};
+  const all=[...LEADERBOARD.map(x=>({...x})),me].sort((a,b)=>b.pts-a.pts);
+  document.getElementById("my-rank") && (document.getElementById("my-rank").textContent="#"+(all.findIndex(x=>x.me)+1));
+  const pod=document.getElementById("podium"); pod.innerHTML="";
+  const order=[1,0,2]; // 2nd,1st,3rd
+  order.forEach(idx=>{
+    const u=all[idx]; if(!u)return;
+    const cls=idx===0?"first":idx===1?"second":"third";
+    const d=document.createElement("div"); d.className="pod "+cls;
+    d.innerHTML=`<div class="pa" style="${idx>2?'background:'+u.c:''}">${idx+1}</div>
+      <div class="pn">${u.name.replace('(あなた)','')}</div>
+      <div class="pp num">${u.pts.toLocaleString()}</div>`;
+    pod.appendChild(d);
+  });
+  const lb=document.getElementById("lboard"); lb.innerHTML="";
+  all.forEach((u,i)=>{
+    const r=document.createElement("div"); r.className="lrow"+(u.me?" me":"");
+    r.innerHTML=`<div class="lrank">${i+1}</div>
+      <div class="lava" style="background:${u.c}">${u.me?'私':u.name.slice(-1)}</div>
+      <div class="lname">${u.name}</div>
+      <div class="lpts num">${u.pts.toLocaleString()}<span style="font-size:11px;font-weight:400;color:#7A879C"> pt</span></div>`;
+    lb.appendChild(r);
+  });
+}
+
+/* =================== AI (Anthropic API in artifact) =================== */
+const RIKUJO_BRAIN = `あなたは日本の陸上長距離・駅伝に精通したスペシャリスト（アナリスト兼コーチ）です。以下の専門知識と原則を必ず踏まえて回答してください。
+
+【専門知識】
+・駅伝の区間特性を理解している：箱根の「花の2区」(エースが集う最長級の区間)、「山登りの5区／山下りの6区」(特殊なスペシャリスト区間)、序盤の入り、終盤の競り合い、つなぎ区間など、区間ごとに求められる適性が異なる。
+・戦術：往路／復路の戦い方、エースをどの区間に置くかの起用法、繰り上げスタート、集団走と単独走の違い、向かい風・気温の影響。
+・評価軸：区間記録・区間順位・自己ベスト・直近の調子(コンディション)・故障明けか・起用区間との相性・伸び盛りの下級生か。
+・学生三大駅伝(出雲＝スピード型・短距離、全日本＝バランス、箱根＝総合力と山)と実業団(ニューイヤー)の性質の違い、主要校・実業団の傾向。
+・専門用語を正確に使う(区間賞、区間新、繰り上げ、ブレーキ、突っ込む、垂れる、トラック型/ロード型 など)。
+
+【原則】
+・与えられた実データ(順位・タイム・区間賞・コンディション)の固有名詞を具体的に引用し、必ず根拠にする。
+・データにない事実は創作しない。推測は「〜とみられる」「可能性がある」と推測だと明示する。
+・読者は熱心な陸上ファン。熱量を持ちつつ、正確で、断定しすぎない冷静な分析を。
+・タイム差や区間記録などの数字を効果的に使い、説得力を出す。`;
+
+async function callAI(prompt, persona){
+  const sys = persona===null ? "" : (persona||RIKUJO_BRAIN);
+  const content = sys ? sys+"\n\n----- ここから依頼 -----\n"+prompt : prompt;
+  const res=await fetch("/v1/messages",{
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,
+      messages:[{role:"user",content}]})
+  });
+  if(!res.ok) throw new Error("AI "+res.status);
+  const data=await res.json();
+  return data.content.filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
+}
+
+/* =================== CHAT BOARD (共有・永続) =================== */
+const BOARD_KEY="rp_board_v1";
+let boardLoaded=false, replyTo=null;
+async function loadBoard(){
+  if(boardLoaded) return;
+  if(window.storage){
+    try{ const r=await window.storage.get(BOARD_KEY,true); if(r&&r.value){ state.posts=JSON.parse(r.value); boardLoaded=true; return; } }catch(e){}
+  }
+  if(!state.posts) state.posts=SEED_POSTS.map(p=>({...p}));
+  boardLoaded=true;
+}
+async function saveBoard(){ if(window.storage){ try{ await window.storage.set(BOARD_KEY, JSON.stringify(state.posts), true);}catch(e){} } }
+
+let commCur='diary';
+function openComm(which){ commCur=which||'diary'; go('community'); }
+function commTab(which){
+  const d=which==='diary'; commCur=which;
+  document.getElementById("view-cdiary").style.display=d?"block":"none";
+  document.getElementById("view-cboard").style.display=d?"none":"block";
+  document.getElementById("ct-diary").classList.toggle("on",d);
+  document.getElementById("ct-board").classList.toggle("on",!d);
+  if(d){ renderDiary(); } else { renderChat(); loadBoard().then(renderChat); }
+}
+function postHtml(p,i,isReply){
+  return `<div class="post${p.mine?' mine':''}${isReply?' reply':''}">
+      <div class="pava" style="background:${p.c}">${p.mine?'私':(p.name||'?').slice(-1)}</div>
+      <div class="pmain">
+        <div class="phead"><span class="pnm">${p.name}</span><span class="ptime">${p.t}</span></div>
+        <div class="pbubble">${escapeHtml(p.text)}</div>
+        <div class="pacts"><span class="${p.liked?'liked':''}" onclick="likePost(${i}${isReply?',true':''})">${p.liked?'❤️':'🤍'} ${p.likes||0}</span>
+        ${isReply?'':`<span onclick="setReply(${i})">💬 返信</span>`}</div>
+      </div></div>`;
+}
+function renderChat(){
+  if(!state.posts)state.posts=SEED_POSTS.map(p=>({...p}));
+  const list=document.getElementById("chat-list"); list.innerHTML="";
+  state.posts.forEach((p,i)=>{
+    let h=postHtml(p,i,false);
+    (p.replies||[]).forEach(r=>{ h+=postHtml(r,i,true); });
+    list.insertAdjacentHTML("beforeend",h);
+  });
+}
+function setReply(i){
+  replyTo=i; const p=state.posts[i];
+  const bar=document.getElementById("reply-bar");
+  bar.style.display="flex";
+  bar.innerHTML=`↩ ${p.name} さんに返信中 <button onclick="clearReply()">✕</button>`;
+  document.getElementById("chat-input").focus();
+}
+function clearReply(){ replyTo=null; document.getElementById("reply-bar").style.display="none"; }
+function sendChat(){
+  const inp=document.getElementById("chat-input"); const v=inp.value.trim();
+  if(!v)return;
+  if(!state.posts)state.posts=SEED_POSTS.map(p=>({...p}));
+  const me={name:"ランナー太郎(あなた)",c:"#13223F",t:"たった今",text:v,likes:0,liked:false,mine:true};
+  if(replyTo!=null && state.posts[replyTo]){
+    if(!state.posts[replyTo].replies)state.posts[replyTo].replies=[];
+    state.posts[replyTo].replies.push(me); clearReply();
+  } else {
+    state.posts.unshift(me);
+  }
+  inp.value=""; renderChat(); saveBoard(); toast("掲示板に投稿しました 💬");
+}
+function likePost(i,isReply){
+  const p=state.posts[i]; if(!p)return;
+  p.liked=!p.liked; p.likes=(p.likes||0)+(p.liked?1:-1); renderChat(); saveBoard();
+}
+function escapeHtml(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+/* =================== PRIZES =================== */
+function renderPrizes(){
+  document.getElementById("prz-pt").textContent=state.points.toLocaleString();
+  document.getElementById("prz-pt-mini").textContent=state.points.toLocaleString();
+  const g=document.getElementById("prizes"); g.innerHTML="";
+  PRIZES.forEach(p=>{
+    const owned=state.ownedPrizes.includes(p.id);
+    const can=state.points>=p.cost;
+    const el=document.createElement("div"); el.className="pz"+(owned?" owned":"");
+    el.onclick=()=>openPrizeDetail(p.id);
+    el.innerHTML=`<div class="img">${p.emoji}</div><h4>${p.name}</h4>
+      <div class="cost num">${p.cost.toLocaleString()}<small> pt</small></div>
+      <button>${owned?'✓ 交換済み':(can?'詳細・交換':'詳細を見る')}</button>`;
+    g.appendChild(el);
+  });
+}
+function openPrizeDetail(id){
+  const p=PRIZES.find(x=>x.id===id);
+  const owned=state.ownedPrizes.includes(id);
+  const can=state.points>=p.cost;
+  const btn = owned
+    ? `<button class="cta" disabled style="background:#e3f5ec;color:var(--good)">✓ 交換済み</button>`
+    : can
+      ? `<button class="cta blue" onclick="redeem('${id}')">このポイントで交換する</button>`
+      : `<button class="cta" disabled>ポイントが ${(p.cost-state.points).toLocaleString()}pt 不足</button>`;
+  document.getElementById("pd-body").innerHTML=`
+    <div class="pd-hero">${p.emoji}</div>
+    <div class="pd-name">${p.name}</div>
+    <div class="pd-cost num">${p.cost.toLocaleString()}<small> pt</small></div>
+    <div class="pd-desc">${p.desc}</div>
+    ${btn}
+    <button class="cta ghost" style="margin-top:10px" onclick="goBack('prizes')">交換所に戻る</button>`;
+  go("prize-detail");
+}
+function redeem(id){
+  const p=PRIZES.find(x=>x.id===id);
+  if(state.ownedPrizes.includes(id)||state.points<p.cost)return;
+  state.points-=p.cost; state.ownedPrizes.push(id); addBadge("collector"); save();
+  goBack("prizes");
+  sheet("🎁",`「${p.name}」と交換しました`,`${p.cost.toLocaleString()}pt を使用しました。残り ${state.points.toLocaleString()}pt。発送/付与のお知らせはマイページに届きます。`,"OK");
+}
+
+/* =================== MYPAGE =================== */
+function renderMypage(){
+  document.getElementById("my-pt").textContent=state.points.toLocaleString();
+  document.getElementById("my-bdg").textContent=state.badges.length;
+  const me={pts:state.points,me:true};
+  const all=[...LEADERBOARD,me].sort((a,b)=>b.pts-a.pts);
+  document.getElementById("my-rank").textContent="#"+(all.findIndex(x=>x.me)+1);
+  const wrap=document.getElementById("badges"); wrap.innerHTML="";
+  ALL_BADGES.forEach(b=>{
+    const got=state.badges.includes(b.id);
+    const el=document.createElement("div"); el.className="bdg"+(got?" got":"");
+    el.innerHTML=`<div class="be">${b.e}</div><div class="bn">${b.n}</div>`;
+    wrap.appendChild(el);
+  });
+}
+
+let analysisTourId="hakone";
+function setAnalysisTour(id){ analysisTourId=id; renderAnalysis(); }
+function renderAnalysis(){
+  const tours=RESULTS_DB.tournaments.slice().sort((a,b)=>{
+    const da=(a.editions[0]||{}).date||"", db=(b.editions[0]||{}).date||""; return db.localeCompare(da);
+  });
+  if(!tours.find(t=>t.id===analysisTourId)) analysisTourId=tours[0].id;
+  const t=tours.find(x=>x.id===analysisTourId);
+  const e=t.editions[0];
+  const recCount=(e.sections||[]).filter(s=>/区間新/.test(s.note||"")).length;
+  const chips=tours.map(x=>`<button class="achip ${x.id===analysisTourId?'on':''}" onclick="setAnalysisTour('${x.id}')">${shortTour(x.name)}</button>`).join("");
+
+  // header stat
+  let html=`<div class="ana-chips">${chips}</div>`;
+  html+=`<div class="ana-hero">
+    <div class="ana-hero-t">${t.name}</div>
+    <div class="ana-hero-sub">前回 第${e.edition}回（${e.year}）</div>
+    <div class="ana-stats">
+      <div><div class="v">${e.standings[0].team}</div><div class="k">前回優勝</div></div>
+      <div><div class="v">${e.standings[0].time}</div><div class="k">優勝記録</div></div>
+      <div><div class="v">${recCount}</div><div class="k">区間新</div></div>
+    </div></div>`;
+
+  // AI preview card
+  html+=`<div class="pv-banner" onclick="openPreviewById('${t.id}')">
+      <div class="pvb-tag">🤖 AI大会プレビュー記事</div>
+      <h4>${t.name}の見どころをAIが記事化</h4>
+      <p>直近のレースと前回データを根拠に、優勝候補・注目区間・好調選手を解説。</p>
+      <div class="pvb-go">›</div></div>`;
+
+  // condition (expanded)
+  html+=conditionPanelHtml(t,8);
+
+  // 区間賞ハイライト
+  if(e.sections&&e.sections.length){
+    const rows=e.sections.map(s=>`<div class="rrow"><div class="rsec">${s.section}区</div>
+      <div class="rrun"><b>${s.runner}${/区間新/.test(s.note||"")?'<span class="rnote">区間新</span>':''}</b><span>${s.team}・${s.distance_km}km</span></div>
+      <div class="rtime">${s.time}</div></div>`).join("");
+    html+=`<div class="eyebrow" style="margin-top:18px">区間賞ハイライト（前回）</div>
+      <div class="rtable">${rows}</div>`;
+  }
+
+  // scout link
+  html+=`<div class="ana-link" onclick="openScout()">
+      <div class="ic">🔍</div><div class="mt"><b>AI選手スカウトレポート</b><span>注目ランナーをレーダーで深掘り</span></div><div class="arr">›</div></div>`;
+
+  html+=`<div class="pv-meta" style="margin-top:14px">📊 すべて収集済みの実データ（総合・区間・区間賞）から自動生成。</div>`;
+  document.getElementById("analysis-body").innerHTML=html;
+}
+function openPreviewById(id){
+  const t=RESULTS_DB.tournaments.find(x=>x.id===id)||TOURNAMENTS.find(x=>x.id===id);
+  if(t) openPreview(t);
+}
+
+/* 選手コンディション：収録した直近レースから各選手の調子を集計 */
+const UNIV_KEYS=["izumo","zennihon","hakone"];
+function shortTour(name){
+  if(/箱根/.test(name))return "箱根";
+  if(/全日本/.test(name))return "全日本";
+  if(/出雲/.test(name))return "出雲";
+  if(/ニューイヤー/.test(name))return "NY駅伝";
+  return name.slice(0,4);
+}
+function buildRunnerForm(pool){
+  const keys = pool==='jitsugyo' ? ["newyear"] : UNIV_KEYS;
+  const map={};
+  RESULTS_DB.tournaments.forEach(t=>{
+    if(!keys.includes(t.id))return;
+    t.editions.forEach(e=>{
+      (e.sections||[]).forEach(s=>{
+        if(!s.runner)return;
+        if(!map[s.runner]) map[s.runner]={runner:s.runner, team:s.team, races:[]};
+        map[s.runner].team=s.team;
+        map[s.runner].races.push({date:e.date, short:shortTour(t.name), section:s.section, time:s.time, rec:/区間新/.test(s.note||"")});
+      });
+    });
+  });
+  const arr=Object.values(map).map(r=>{
+    r.races.sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+    const wins=r.races.length, recs=r.races.filter(x=>x.rec).length;
+    const latestRec=r.races[0]&&r.races[0].rec;
+    r.formScore = wins*10 + recs*8 + (latestRec?6:0);
+    if(recs>=2 || (wins>=2 && latestRec)) r.cond={t:"絶好調",e:"🔥",c:"#D7263D"};
+    else if(wins>=2 || latestRec) r.cond={t:"好調",e:"📈",c:"#1FA363"};
+    else r.cond={t:"安定",e:"✅",c:"#2B5FD9"};
+    return r;
+  });
+  return arr.sort((a,b)=>b.formScore-a.formScore);
+}
+function conditionPanelHtml(t,limit){
+  const pool = dbKeyFor(t)==='newyear' ? 'jitsugyo' : 'univ';
+  const list=buildRunnerForm(pool).slice(0,limit||5);
+  if(!list.length)return "";
+  const rows=list.map(r=>{
+    const hist=r.races.slice(0,3).map(x=>`<span class="cd-h">${x.short} ${x.section}区 ${x.time}${x.rec?' <b>新</b>':''}</span>`).join("");
+    return `<div class="cd-row">
+      <div class="cd-badge" style="background:${r.cond.c}">${r.cond.e}<span>${r.cond.t}</span></div>
+      <div class="cd-main">
+        <div class="cd-nm">${r.runner} <span class="cd-tm">${r.team}</span></div>
+        <div class="cd-hist">${hist}</div>
+      </div>
+    </div>`;
+  }).join("");
+  return `<div class="cd-panel">
+    <div class="cd-head">注目選手のコンディション <span style="color:var(--muted);font-weight:400">（直近レースから）</span></div>
+    ${rows}
+    <div class="cd-foot">※収録した直近レースの区間成績から調子を判定。レースを追うほど精度UP。</div>
+  </div>`;
+}
+
+/* =================== AI 大会プレビュー記事 =================== */
+const previewCache={};
+function dbKeyFor(t){
+  const id=t.id||"";
+  if(id.startsWith("hakone"))return "hakone";
+  if(id.startsWith("zenniti")||/全日本/.test(t.name))return "zennihon";
+  if(id.startsWith("izumo")||/出雲/.test(t.name))return "izumo";
+  if(id.startsWith("newyear")||/ニューイヤー/.test(t.name))return "newyear";
+  return null;
+}
+function buildPreviewContext(dbKey){
+  const t=RESULTS_DB.tournaments.find(x=>x.id===dbKey);
+  if(!t||!t.editions.length)return null;
+  const e=t.editions[0];
+  let ctx=`大会名:${t.name}（前回=第${e.edition}回 ${e.year}年の結果）\n`;
+  ctx+=`【前回 総合上位】\n`+e.standings.slice(0,8).map(s=>`${s.rank}位 ${s.team} ${s.time}${s.note?"("+s.note+")":""}`).join("\n");
+  if(e.sections&&e.sections.length){
+    ctx+=`\n【前回 区間賞】\n`+e.sections.map(s=>`${s.section}区 ${s.runner}(${s.team}) ${s.time}${s.note?" "+s.note:""}`).join("\n");
+  }
+  return ctx;
+}
+function openPreview(t){
+  document.getElementById("pv-title").textContent=t.name+" プレビュー";
+  document.getElementById("pv-sub").textContent="AIによるレース展望";
+  go("preview");
+  const body=document.getElementById("pv-body");
+  if(previewCache[t.id]){ body.innerHTML=previewCache[t.id]; return; }
+  body.innerHTML=`<div class="pv-loading"><div class="sp"></div><div style="font-weight:700;text-align:center">AIが前回データを分析して<br>プレビュー記事を執筆中…</div></div>`;
+  genPreview(t);
+}
+async function genPreview(t){
+  const dbKey=dbKeyFor(t);
+  const ctx=dbKey?buildPreviewContext(dbKey):null;
+  let condCtx="";
+  if(dbKey){
+    const pool = dbKey==='newyear'?'jitsugyo':'univ';
+    const fl=buildRunnerForm(pool).slice(0,6);
+    if(fl.length) condCtx=`\n【直近レースで好調な選手】\n`+fl.map(r=>`${r.runner}(${r.team})・${r.cond.t}：`+r.races.slice(0,2).map(x=>`${x.short}${x.section}区${x.time}${x.rec?'区間新':''}`).join("、")).join("\n");
+  }
+  const prompt=
+    `あなたは駅伝・陸上専門のスポーツ記者です。次の「${t.name}」について、レース前のプレビュー記事を日本語で書いてください。\n`+
+    (ctx? `以下は前回大会の実際の結果データです。これを根拠に、今大会の展望を予想してください。\n\n${ctx}${condCtx}\n\n`
+        : `データが限られるため、一般的な展望として書いてください。\n\n`)+
+    `条件:\n`+
+    `・読者は陸上ファン。わくわくする記者調で。\n`+
+    `・好調な選手のコンディション（直近のレース結果）に具体的に触れる。\n`+
+    `・次の5見出しを必ずこの形式で使う（各見出しは行頭に◆を付け、その行は見出しのみ）:\n`+
+    `◆優勝候補\n◆対抗・注目チーム\n◆注目の区間\n◆注目選手\n◆見どころ総括\n`+
+    `・各見出しの後に2〜3文の段落を書く。\n`+
+    `・前回優勝校や区間記録、好調選手など、データの固有名詞を具体的に引用する。\n`+
+    `・全体で600〜750字程度。マークダウン記号(#や*)は使わない。`;
+  try{
+    const out=await callAI(prompt);
+    const html=renderPreviewArticle(t,out,dbKey,false);
+    previewCache[t.id]=html;
+    document.getElementById("pv-body").innerHTML=html;
+  }catch(err){
+    const html=renderPreviewArticle(t,fallbackPreview(t,dbKey),dbKey,true);
+    previewCache[t.id]=html;
+    document.getElementById("pv-body").innerHTML=html;
+  }
+}
+function renderPreviewArticle(t,text,dbKey,isFallback){
+  const lines=text.split(/\n+/).map(l=>l.trim()).filter(Boolean);
+  let body="", started=false;
+  lines.forEach(l=>{
+    if(l.startsWith("◆")){ body+=`<div class="pv-h">🏁 ${escapeHtml(l.replace(/^◆\s*/,""))}</div>`; started=true; }
+    else if(!started){ body+=`<div class="pv-lead">${escapeHtml(l)}</div>`; }
+    else { body+=`<div class="pv-p">${escapeHtml(l)}</div>`; }
+  });
+  const src=dbKey?`<div class="pv-src">📊 根拠データ：${(RESULTS_DB.tournaments.find(x=>x.id===dbKey)||{}).name} 前回大会の総合順位・区間賞（実データ）</div>`:"";
+  return src+`<div class="pv-article">${body}</div>`+
+    `<div class="pv-meta">${isFallback?"⚠️ オフライン簡易版を表示中。":"🤖 Claudeが実データをもとに自動生成。"}<br>※予想であり結果を保証するものではありません。</div>`;
+}
+function fallbackPreview(t,dbKey){
+  let champ="優勝候補", note="";
+  if(dbKey){
+    const e=RESULTS_DB.tournaments.find(x=>x.id===dbKey).editions[0];
+    champ=e.standings[0].team; note=`前回は${champ}が${e.standings[0].time}で制した。`;
+  }
+  return `${t.name}がいよいよ開幕。${note}今大会も上位争いから目が離せない。\n`+
+    `◆優勝候補\n${champ}が前回王者として軸になる。総合力で一歩リードか。\n`+
+    `◆対抗・注目チーム\n前回上位校が虎視眈々と逆転を狙う。エースの仕上がりが鍵。\n`+
+    `◆注目の区間\nエース区間と山区間で大きく順位が動く。区間賞争いにも注目。\n`+
+    `◆ダークホース\n下級生の台頭次第で勢力図が変わる可能性がある。\n`+
+    `◆見どころ総括\n襷をつなぐドラマと区間ごとの駆け引き。あなたの予想で参加しよう。`;
+}
+
+/* =================== SCOUT (radar) =================== */
+function openScout(){go("scout");}
+function renderScout(i){
+  const tabs=document.getElementById("scout-tabs"); tabs.innerHTML="";
+  SCOUTS.forEach((s,idx)=>{
+    const b=document.createElement("button"); b.className=idx===i?"on":""; b.textContent=s.name;
+    b.onclick=()=>renderScout(idx); tabs.appendChild(b);
+  });
+  const s=SCOUTS[i];
+  document.getElementById("sc-name").textContent=s.name;
+  document.getElementById("sc-team").textContent=s.team;
+  document.getElementById("sc-report").innerHTML = s.aiReport
+    ? `<b>AIスカウト所見<span class="ai-badge">AI生成</span>：</b>${s.aiReport}`
+    : "<b>AIスカウト所見：</b>"+s.report;
+  document.getElementById("sc-ai").innerHTML = s.aiReport
+    ? `<button class="cta ghost" onclick="aiScout(${i})">🤖 AIで再分析する</button>`
+    : `<button class="cta blue" onclick="aiScout(${i})">🤖 AIで詳細分析する</button>`;
+  drawRadar(s.stats);
+}
+async function aiScout(i){
+  const s=SCOUTS[i];
+  const rep=document.getElementById("sc-report"), btn=document.getElementById("sc-ai");
+  rep.innerHTML=`<span class="ai-busy"><span class="ai-dot"></span>AIが選手データを分析中…</span>`;
+  btn.innerHTML="";
+  const st=s.stats;
+  const prompt=`次の選手の能力データから、スカウト所見を日本語250字程度で書いてください。強み・課題に加え、能力バランスから見て箱根のどの区間タイプ（例：花の2区などのエース区間、山の5区/6区、スピードが活きる平地区間、つなぎ区間）に向くかを、区間特性の理由とともに具体的に提案してください。箇条書きは使わず自然な文章で。\n`+
+    `選手名:${s.name} / 所属:${s.team}\n`+
+    `スピード:${st.スピード} スタミナ:${st.スタミナ} ラストスパート:${st.ラストスパート} 安定感:${st.安定感} メンタル:${st.メンタル}（各100点満点）`;
+  try{
+    const out=await callAI(prompt);
+    s.aiReport=out;
+    renderScout(i);
+  }catch(e){
+    rep.innerHTML="<b>AIスカウト所見：</b>"+s.report;
+    btn.innerHTML=`<button class="cta blue" onclick="aiScout(${i})">🤖 AIで詳細分析する</button>`;
+    toast("AI分析を利用できませんでした。時間をおいて再試行してください");
+  }
+}
+function drawRadar(stats){
+  const keys=Object.keys(stats), cx=120, cy=110, R=78, N=keys.length;
+  const svg=document.getElementById("radar"); svg.innerHTML="";
+  const ns="http://www.w3.org/2000/svg";
+  const pt=(ang,r)=>[cx+Math.sin(ang)*r, cy-Math.cos(ang)*r];
+  // grid rings
+  [0.25,0.5,0.75,1].forEach(f=>{
+    let d="";
+    keys.forEach((k,j)=>{const a=(Math.PI*2/N)*j;const[x,y]=pt(a,R*f);d+=(j?"L":"M")+x.toFixed(1)+" "+y.toFixed(1);});
+    d+="Z";
+    const poly=document.createElementNS(ns,"path");
+    poly.setAttribute("d",d);poly.setAttribute("fill","none");poly.setAttribute("stroke","#E4EAF3");poly.setAttribute("stroke-width","1");
+    svg.appendChild(poly);
+  });
+  // axes + labels
+  keys.forEach((k,j)=>{
+    const a=(Math.PI*2/N)*j;const[x,y]=pt(a,R);
+    const l=document.createElementNS(ns,"line");l.setAttribute("x1",cx);l.setAttribute("y1",cy);l.setAttribute("x2",x);l.setAttribute("y2",y);l.setAttribute("stroke","#E4EAF3");svg.appendChild(l);
+    const[lx,ly]=pt(a,R+14);
+    const t=document.createElementNS(ns,"text");t.setAttribute("x",lx);t.setAttribute("y",ly+3);t.setAttribute("text-anchor","middle");t.setAttribute("font-size","9.5");t.setAttribute("font-weight","700");t.setAttribute("fill","#7A879C");t.textContent=k;svg.appendChild(t);
+  });
+  // data polygon
+  let d="";
+  keys.forEach((k,j)=>{const a=(Math.PI*2/N)*j;const[x,y]=pt(a,R*stats[k]/100);d+=(j?"L":"M")+x.toFixed(1)+" "+y.toFixed(1);});
+  d+="Z";
+  const area=document.createElementNS(ns,"path");
+  area.setAttribute("d",d);area.setAttribute("fill","rgba(43,95,217,.22)");area.setAttribute("stroke","#2B5FD9");area.setAttribute("stroke-width","2");
+  svg.appendChild(area);
+  keys.forEach((k,j)=>{const a=(Math.PI*2/N)*j;const[x,y]=pt(a,R*stats[k]/100);
+    const c=document.createElementNS(ns,"circle");c.setAttribute("cx",x);c.setAttribute("cy",y);c.setAttribute("r","3");c.setAttribute("fill","#D7263D");svg.appendChild(c);});
+}
+
+/* =================== DIARY =================== */
+function saveGoal(){
+  state.goal=document.getElementById("d-goal").value.trim();
+  save();
+  document.getElementById("goal-cur").textContent = state.goal ? "現在の目標："+state.goal : "";
+  renderDiary();
+  toast(state.goal?"目標を保存しました 🎯":"目標をクリアしました");
+}
+let weekAICache={};
+function mondayOf(d){ const x=new Date(d); const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day); x.setHours(0,0,0,0); return x; }
+function weekKey(){ return mondayOf(new Date()).toISOString().slice(0,10); }
+function thisWeekEntries(){
+  const m=mondayOf(new Date()); const e=new Date(m); e.setDate(e.getDate()+7);
+  return state.diaries.filter(d=>{ const dt=new Date(d.date+"T00:00:00"); return dt>=m && dt<e; });
+}
+function weekStats(entries){
+  const hard=["インターバル","ペース走","レース"];
+  let km=0, points=0; const days=new Set();
+  entries.forEach(d=>{
+    const txt=entryText(d), ev=inferEvent(d.event||"",txt,"");
+    days.add(d.date);
+    if(hard.includes(ev)) points++;
+    const kmM=(txt.match(/([\d.]+)\s*(?:km|キロ)/i)||[])[1];
+    if(kmM) km+=parseFloat(kmM);
+    else { const reps=(txt.match(/(\d+)\s*本/)||[])[1], dist=(txt.match(/(\d{3,4})\s*(?:m|ｍ|の)/)||[])[1]; if(reps&&dist) km+=reps*dist/1000; }
+  });
+  return {km:Math.round(km*10)/10, points, days:days.size, sessions:entries.length};
+}
+function weeklySummaryHtml(){
+  const entries=thisWeekEntries(), s=weekStats(entries);
+  const key=weekKey()+"|"+(state.goal||""), ai=weekAICache[key];
+  const stats=`<div class="wk-stats">
+    <div><div class="v">${s.km}</div><div class="k">走行距離(km)</div></div>
+    <div><div class="v">${s.points}</div><div class="k">ポイント練習</div></div>
+    <div><div class="v">${s.days}</div><div class="k">練習日</div></div></div>`;
+  let body;
+  if(!entries.length) body=`<div class="wk-empty">今週の記録はまだありません。練習を記録すると自動で集計します。</div>`;
+  else if(ai==="__loading__") body=`<div class="wk-ai"><span class="ai-busy"><span class="ai-dot"></span>今週をAIが講評中…</span></div>`;
+  else if(ai) body=`<div class="wk-ai"><b>AI週間講評<span class="ai-badge">AI</span></b><br>${ai}</div>`;
+  else body=`<button class="wk-btn" onclick="genWeekSummary()">🤖 今週をAIで講評（目標との進捗）</button>`;
+  return `<div class="wk-card"><div class="wk-h">📈 今週のサマリー</div>${stats}${body}</div>`;
+}
+async function genWeekSummary(){
+  const key=weekKey()+"|"+(state.goal||"");
+  weekAICache[key]="__loading__"; renderDiary();
+  const entries=thisWeekEntries(), s=weekStats(entries);
+  const list=entries.map(d=>`・${d.date} [${inferEvent(d.event||"",entryText(d),"")}] ${entryText(d)}`).join("\n");
+  const goalLine=state.goal?`このランナーの目標：「${state.goal}」\n`:"";
+  const prompt=`あなたはこのランナーを継続して見ている長距離コーチです。今週の練習ログをもとに、週間の振り返りを書いてください。\n`+goalLine+
+    `今週の集計：走行距離 約${s.km}km / ポイント練習 ${s.points}回 / 練習${s.days}日。\n`+
+    `次を含める：①今週の総評（量と質のバランス、練習の流れ）②`+(state.goal?`目標「${state.goal}」に対する進捗と、現状どのくらいの距離感か`:`調子と疲労の傾向`)+`③来週フォーカスすべき点を具体的に。\n`+
+    `テンプレ的な表現は避け、ログの中身に即して具体的に。日本語200〜260字、自然な文章で、箇条書き・見出しは使わない。\n\n【今週のログ(古い順)】\n${list}`;
+  try{ const out=await callAI(prompt); weekAICache[key]=out; }
+  catch(e){ weekAICache[key]=weekFallback(s, state.goal); }
+  renderDiary();
+}
+function weekFallback(s, goal){
+  const p=[`今週は${s.days}日練習し、走行距離は約${s.km}km、ポイント練習は${s.points}回でした。`];
+  if(s.points>=3) p.push(`質の高い練習がよく入っています。その分、疲労が抜けにくいので回復日もしっかり確保しましょう。`);
+  else if(s.points===0) p.push(`今週はつなぎ中心でした。来週はインターバルかペース走で刺激を入れると伸びにつながります。`);
+  else p.push(`量と質のバランスは悪くありません。`);
+  if(goal) p.push(`目標「${goal}」に向けては、この積み重ねが土台になります。${s.points>=2?"質も入っており、着実に近づけています。":"来週はポイント練習を1〜2回足して、目標ペースへの刺激を増やしましょう。"}`);
+  p.push(`来週は${s.days<3?"練習日をもう1日増やす":"今の頻度を保ちつつ、負荷の波（質×回復）を意識する"}と、さらに良い流れになります。`);
+  return p.join("");
+}
+function renderDiary(){
+  if(!document.getElementById("d-date").value){
+    document.getElementById("d-date").value=new Date().toISOString().slice(0,10);
+  }
+  const gi=document.getElementById("d-goal"); if(gi&&!gi.value) gi.value=state.goal||"";
+  const gc=document.getElementById("goal-cur"); if(gc) gc.textContent = state.goal ? "現在の目標："+state.goal : "";
+  const ws=document.getElementById("week-summary"); if(ws) ws.innerHTML=weeklySummaryHtml();
+  const list=document.getElementById("diary-list"); list.innerHTML="";
+  if(!state.diaries.length){list.innerHTML='<div class="empty">まだ記録がありません。<br>練習を記録するとAIが分析します。</div>';return;}
+  [...state.diaries].reverse().forEach(d=>{
+    const body = d.content || [d.time,d.memo].filter(Boolean).join(" ／ ") || "—";
+    const el=document.createElement("div"); el.className="diary-card";
+    el.innerHTML=`<div class="d-top"><span>${d.date}</span><span>${d.event||""}</span></div>
+      <div class="d-ev" style="white-space:pre-wrap">${escapeHtml(body)}</div>
+      <div class="d-ai">${d.aiPending?'<span class="ai-busy"><span class="ai-dot"></span>AIが分析中…</span>':`<b>AI分析<span class="ai-badge">AI</span>：</b>${d.ai}`}</div>`;
+    list.appendChild(el);
+  });
+}
+async function addDiary(){
+  const date=document.getElementById("d-date").value;
+  const content=document.getElementById("d-content").value.trim();
+  if(!date){toast("日付を入力してください");return;}
+  if(!content){toast("練習内容を入力してください");return;}
+  const event=inferEvent("", content, "");
+  const prior=[...state.diaries];
+  const entry={date,event,content,ai:"（AIが分析中…）",aiPending:true};
+  state.diaries.push(entry); addBadge("diarist"); save();
+  document.getElementById("d-content").value="";
+  renderDiary();
+  toast("練習日誌を記録しました 📔");
+  const recent=prior.slice(-5);
+  const histText = recent.length
+    ? recent.map(d=>`・${d.date} [${d.event||"?"}] ${d.content||[d.time,d.memo].filter(Boolean).join(" / ")||"記録なし"}`).join("\n")
+    : "（過去の記録なし。初回の記録です）";
+  const goalLine = state.goal ? `このランナーが今かかげている目標：「${state.goal}」\n` : "";
+  const prompt=
+    `あなたはこのランナー個人を継続して見ている、人間味のある長距離コーチです。下の情報を読み、今日の練習について"その人にだけ向けた"コメントを書いてください。\n`+
+    goalLine+
+    `次を必ず織り込む：\n`+
+    `①本人が書いた感想・体感に共感を示してから入る（例:「絶好調」なら一緒に喜ぶ、「脚が重い」ならいたわる）。本人の言葉を受け止めること。\n`+
+    `②今日の練習内容を具体的に読み取って評価（種目・本数・距離・設定タイムに触れる）。\n`+
+    (state.goal?`③目標「${state.goal}」に対して、今日の練習がどう効くか・現状どのくらい近づけているかを具体的に判断する。\n`:`③直近の練習の流れ（連日の強度・疲労・週内バランス）との関係を述べる。\n`)+
+    `④次にやるとよい練習を一つ提案。\n`+
+    `テンプレ的な言い回し（「良いトレンドです」「水分と睡眠を」等）は禁止。その日の内容と感想に即した、具体的で温かい言葉にする。日本語180〜230字、自然な文章で、箇条書き・見出しは使わない。\n\n`+
+    `【直近の練習履歴(古い順)】\n${histText}\n\n【今日の練習内容（本人の記述）】\n${date}：${content}`;
+  try{
+    const out=await callAI(prompt);
+    entry.ai=out;
+  }catch(e){
+    entry.ai=localDiaryAnalysis(entry, prior, state.goal);
+  }
+  entry.aiPending=false; save(); renderDiary();
+}
+
+/* オフライン時でも記録内容・履歴から毎回変わる簡易分析を生成 */
+function entryText(d){ return d.content || [d.time,d.memo].filter(Boolean).join(" ") || ""; }
+function inferEvent(selected, memo, time){
+  const txt=((memo||"")+" "+(time||"")).trim();
+  if(/インターバル|インター|レペ|レペティ|\d+\s*本|×\s*\d+|x\s*\d+/i.test(txt)) return "インターバル";
+  if(/ペース走|閾値|ＬＴ|テンポ走|テンポ|\bLT\b/i.test(txt)) return "ペース走";
+  if(/ロング|ＬＳＤ|LSD|距離走|30\s*km|25\s*km|20\s*km|２０ｋｍ/i.test(txt)) return "ロング走";
+  if(/レース|大会|記録会|タイムトライアル|ＴＴ|TT/i.test(txt)) return "レース";
+  if(/ジョグ|jog|流し|つなぎ|リカバリー|ゆっくり/i.test(txt)) return "ジョグ";
+  if(/km|キロ|分|:|：/.test(txt)) return "ジョグ";
+  return selected||"ラン";
+}
+function localDiaryAnalysis(entry, prior, goal){
+  const txt=entryText(entry);
+  const e=inferEvent(entry.event||"", txt, "");
+  const hard=["インターバル","ペース走","レース"];
+  function pick(arr){ let h=0; for(const c of txt) h=(h*31+c.charCodeAt(0))>>>0; return arr[h%arr.length]; }
+  // 本人の感想（ムード）を検知
+  const pos=/絶好調|好調|ええ感じ|いい感じ|良い感じ|快調|バッチリ|余裕|軽い|キレ|走れた|気持ちよく|楽だった|調子いい|ばっちり/;
+  const neg=/重い|きつい|しんど|だる|痛|張り|違和感|不調|ダメ|垂れ|失速|動かな|苦し|疲れ/;
+  const mood = pos.test(txt)?"pos":(neg.test(txt)?"neg":"neu");
+  // 種目ごとの役割（目標への効き方）
+  const role={
+    "インターバル":"スピードと心肺を引き上げる、目標達成のカギになるポイント練習",
+    "ペース走":"レースペース耐性と閾値を押し上げる練習",
+    "ロング走":"後半まで粘る脚をつくるスタミナ練習",
+    "ジョグ":"疲労を抜いて次の質を高める土台づくり",
+    "レース":"現在地を測る実戦",
+    "ラン":"走力を支える基礎づくり"
+  };
+  const obs={
+    "インターバル":"本数の後半まで設定とフォームを保てたかが質の分かれ目です。",
+    "ペース走":"設定を一定で押せていれば、持久的な土台は確実に上がっています。",
+    "ロング走":"終盤までペースを保てていれば、狙いどおりの刺激が入っています。",
+    "ジョグ":"心拍を上げすぎず、脚の疲労を抜けていれば狙いどおりです。",
+    "レース":"出した記録は今後の練習設定の基準になります。",
+    "ラン":"継続して走れていること自体が積み重ねになります。"
+  };
+  // ① 感想に寄り添う開口
+  const open = mood==="pos"
+    ? pick([`「`+`いい感触`+`」が伝わってきます。`,`好調そうで何よりです。`,`手応えがあったようですね、いいですね。`])
+    : mood==="neg"
+    ? pick([`今日は少し重さがあったみたいですね。`,`コンディションが万全でない中、よく走り切りました。`,`しんどさの中での一本、お疲れさまでした。`])
+    : pick([`今日もお疲れさまでした。`,`しっかり積み上げられていますね。`,`記録ありがとうございます、見ていきましょう。`]);
+  let head=`${open}${e}を消化。`;
+  // 具体（本数・距離・ペース）
+  const reps=(txt.match(/(\d+)\s*本/)||[])[1];
+  const dist=(txt.match(/(\d{3,4})\s*(?:m|ｍ|の)/)||[])[1];
+  const km=(txt.match(/([\d.]+)\s*(?:km|キロ)/i)||[])[1];
+  const pace=(txt.match(/(\d{1,2}[分'’](\d{1,2})?|\d{2,3}\s*秒)/)||[])[0];
+  let detail="";
+  if(e==="インターバル" && (reps||dist)) detail=`${dist?dist+"m":""}${reps?"×"+reps+"本":""}${pace?"・"+pace+"前後":""}をこなせていれば上々です。`+obs[e];
+  else if(km) detail=`${km}km${pace?"を"+pace+"ペースで":"を"}走れており、`+obs[e];
+  else detail=obs[e];
+  // ② 目標への寄せ
+  let goalPart="";
+  if(goal){
+    const prog = mood==="neg"
+      ? `今日は無理せずでOK。焦らず積めば必ず近づきます。`
+      : `この調子で重ねれば、着実に近づいていけます。`;
+    goalPart=`目標「${goal}」に向けては、今日の${e}は${role[e]||role["ラン"]}。${prog}`;
+  }
+  // ③ ムード×種目で次の一手
+  let next;
+  if(mood==="neg") next=pick([`明日はジョグか休養で回復を最優先に。違和感が続くなら早めにケアを。`,`今は引くのが正解の日。睡眠と栄養で立て直しましょう。`]);
+  else if(hard.includes(e)) next=pick([`いい刺激が入った分、次はリカバリーを挟んで超回復を狙いましょう。`,`質が高かったので、翌日はつなぎジョグで脚を流すのがおすすめです。`]);
+  else if(e==="ジョグ") next=pick([`回復が進んだら、次は閾値走かインターバルで強度を入れていきましょう。`,`いい土台です。次のポイント練習に向けて脚を整えていきましょう。`]);
+  else next=pick([`体調を見ながら、次のポイント練習に向けて準備していきましょう。`,`流れは悪くないので、メリハリをつけて積んでいきましょう。`]);
+  // 連日高強度の注意（履歴）
+  const lastE = prior.length ? inferEvent(prior[prior.length-1].event||"", entryText(prior[prior.length-1]), "") : null;
+  if(hard.includes(e) && hard.includes(lastE)) next=`前回もポイント練習でしたね。連日の高強度は疲労が抜けにくいので、明日はリカバリーか休養を。`+next;
+  return [head+detail, goalPart, next].filter(Boolean).join(" ");
+}
+
+/* =================== HELPERS =================== */
+function addBadge(id){ if(!state.badges.includes(id)){state.badges.push(id);} }
+let toastTimer;
+function toast(msg){
+  const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),2200);
+}
+function sheet(big,title,body,btn){
+  const s=document.getElementById("sheet");
+  s.innerHTML=`<div class="big">${big}</div><h3>${title}</h3><p>${body}</p><button class="cta blue" onclick="closeSheet()">${btn}</button>`;
+  document.getElementById("modal").classList.add("open");
+}
+function closeSheet(){document.getElementById("modal").classList.remove("open");}
+document.getElementById("modal").addEventListener("click",e=>{if(e.target.id==="modal")closeSheet();});
+
+/* =================== JST CLOCK =================== */
+function tickClock(){
+  try{
+    const t=new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date());
+    document.getElementById("clock").textContent=t;
+  }catch(e){ document.getElementById("clock").textContent=new Date().toTimeString().slice(0,5); }
+}
+
+/* =================== INIT =================== */
+(async function(){ await load(); tickClock(); setInterval(tickClock,1000); renderHome(); })();
+</script>
+</body>
+</html>
